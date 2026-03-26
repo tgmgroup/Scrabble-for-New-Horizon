@@ -26,6 +26,7 @@ class Rack extends Surface {
    * underlies the swap rack.
    */
   constructor(factory, spec) {
+
     // The id will be used as the base for generating the id's
     // for the Squares in the underlying Surface. Note that
     // the UI will have Rack objects for the player rack and
@@ -204,6 +205,22 @@ class Rack extends Surface {
     return `[${this.tiles().map(t => stringify(t)).join(",")}]`;
   }
   /* c8 ignore stop */
+
+  /**
+   * @override
+   */
+  unpack(data, edition) {
+    super.unpack(data, edition);
+    // super.unpack locks tiles, so we have to reset to unlock them and
+    // clear blanks
+    this.forEachTiledSquare(s => {
+      delete s.tile.isLocked;
+      if (s.tile.isBlank)
+        s.letter = " ";
+      return false;
+    });
+    return this;
+  }
 }
 
 export { Rack }

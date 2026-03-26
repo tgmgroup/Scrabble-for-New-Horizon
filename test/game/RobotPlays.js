@@ -9,11 +9,13 @@ import { MemoryDatabase } from "../../test/MemoryDatabase.js";
 import { stringify } from "../../src/common/Utils.js";
 import { TestSocket } from '../TestSocket.js';
 import { Game as _Game } from "../../src/game/Game.js";
-import { Commands } from "../../src/game/Commands.js";
+import { Turn as _Turn } from "../../src/game/Turn.js";
+import { CommandsMixin } from "../../src/game/CommandsMixin.js";
 _Game.USE_WORKERS = false;
-const Game = Commands(_Game);
+const Game = CommandsMixin(_Game);
 const Player = Game.CLASSES.Player;
 const Tile = Game.CLASSES.Tile;
+const Turn = Game.CLASSES.Turn;
 const Move = Game.CLASSES.Move;
 
 /**
@@ -73,7 +75,7 @@ describe("game/RobotPlays", () => {
     socket.on(Game.Notify.TURN, (turn, event, seqNo) => {
       switch (seqNo) {
       case 1:
-        assert.equal(turn.type, Game.Turns.PASSED);
+        assert.equal(turn.type, Turn.Type.PASSED);
         assert.equal(turn.playerKey, robot.key);
         assert.equal(turn.nextToGoKey, human.key);
         socket.done();
@@ -118,7 +120,7 @@ describe("game/RobotPlays", () => {
     socket.on(Game.Notify.TURN, (data, event, seqNo) => {
       assert.equal(seqNo, 1);
       assert.equal(event, Game.Notify.TURN);
-      assert(data.type, Game.Turns.PLAYED);
+      assert.equal(data.type, Turn.Type.PLAYED);
       assert.deepEqual(data.words, [ { word: "AGO", score: 6 } ]);
       assert.equal(data.placements.length, 3);
       assert.equal(data.placements[0].letter, "A");
@@ -193,7 +195,7 @@ describe("game/RobotPlays", () => {
     const socket = new TestSocket();
     const handle = (data, event, seqNo) => {
       assert.equal(event, Game.Notify.TURN);
-      assert.equal(data.type, Game.Turns.PLAYED);
+      assert.equal(data.type, Turn.Type.PLAYED);
       assert.equal(data.words.length, 1);
       switch (seqNo) {
       case 1:
@@ -273,17 +275,17 @@ describe("game/RobotPlays", () => {
     const handle = (turn, event, seqNo) => {
       switch (seqNo) {
       case 1:
-        assert.equal(turn.type, Game.Turns.PLAYED);
+        assert.equal(turn.type, Turn.Type.PLAYED);
         break;
       case 2:
         assert.equal(event, Game.Notify.TURN);
-        assert.equal(turn.type, Game.Turns.GAME_ENDED);
+        assert.equal(turn.type, Turn.Type.GAME_ENDED);
         assert.equal(turn.endState, Game.State.GAME_OVER);
         exp = [
           { key: human.key, tiles: 4 },
           { key: robot.key, tiles: -4, tilesRemaining: "Q" }
         ];
-        assert.deepEqual(turn.score, exp);
+        assert.deepEqual(turn.endStates, exp);
         assert.equal(turn.playerKey, robot.key);
         assert(!turn.nextToGoKey);
         assert.equal(human.score, 103);
@@ -351,16 +353,16 @@ describe("game/RobotPlays", () => {
     socket.on(Game.Notify.TURN, (turn, event, seqNo) => {
       switch (seqNo) {
       case 1:
-        assert.equal(turn.type, Game.Turns.PLAYED);
+        assert.equal(turn.type, Turn.Type.PLAYED);
         break;
       case 2:
-        assert.equal(turn.type, Game.Turns.CHALLENGE_WON);
+        assert.equal(turn.type, Turn.Type.CHALLENGE_WON);
         assert.equal(turn.score, -3);
         assert.equal(turn.playerKey, human.key);
         assert.equal(turn.challengerKey, robot.key);
         break;
       case 3:
-        assert.equal(turn.type, Game.Turns.PLAYED);
+        assert.equal(turn.type, Turn.Type.PLAYED);
         // sum of tiles 3, first play X2 + bonus 10
         assert.equal(turn.score, 16);
         assert.equal(turn.playerKey, robot.key);

@@ -11,20 +11,6 @@ import { Dialog } from "./Dialog.js";
  */
 class GameSetupDialog extends Dialog {
 
-  // ordered types for <select>s in UI
-  static Penalty_types = [
-    Game.Penalty.PER_WORD, Game.Penalty.PER_TURN,
-    Game.Penalty.MISS, Game.Penalty.NONE
-  ];
-
-  static Timer_types = [
-    Game.Timer.NONE, Game.Timer.TURN, Game.Timer.GAME
-  ];
-
-  static WordCheck_types = [
-    Game.WordCheck.NONE, Game.WordCheck.AFTER, Game.WordCheck.REJECT
-  ];
-
   /**
    * @override
    */
@@ -65,7 +51,7 @@ class GameSetupDialog extends Dialog {
   }
 
   showPenaltyFields() {
-    const type = this.$dlg.find("[name=challengePenalty]").val();
+    const type = Number(this.$dlg.find("[name=challengePenalty]").val());
     switch (type) {
     default:
       this.$dlg.find("[name=penaltyPoints]")
@@ -86,55 +72,64 @@ class GameSetupDialog extends Dialog {
   }
 
   createDialog() {
-    function makeOptions(list, $sel) {
-      for (const p of list)
-        $sel.append(
-          `<option value="${p ? p : 'none'}">${p ? $.i18n(p) : $.i18n("None")}</option>`);
+    // list is an ordered list of enum values
+    // i18n is an array of i18n keys
+    // dflt is default enum value
+    // $el is the <select> jObject
+    function orderEnum(enums, i18n, deflt, $el) {
+      for (const p of enums) {
+        const txt = $.i18n(i18n[p]);
+        const sel = (p === deflt) ? ` selected="selected"` : "";
+        $el.append(`<option value="${p}"${sel}>${txt}</option>`);
+      }
     }
 
-    return super.createDialog()
-    .then(() => {
-      const $pen = this.$dlg.find("[name=challengePenalty]");
-      makeOptions(GameSetupDialog.Penalty_types, $pen);
-      $pen.on("selectmenuchange", () => this.showPenaltyFields());
-      this.showPenaltyFields();
+    const $pen = this.$dlg.find("[name=challengePenalty]");
+    orderEnum([
+      Game.Penalty.NONE,
+      Game.Penalty.MISS,
+      Game.Penalty.PER_WORD,
+      Game.Penalty.PER_TURN
+    ], Game.PenaltyI18N, Game.Penalty.MISS, $pen);
+    $pen.on("selectmenuchange", () => this.showPenaltyFields());
+    this.showPenaltyFields();
 
-      const $tim = this.$dlg.find("[name=timerType]");
-      makeOptions(GameSetupDialog.Timer_types, $tim);
-      $tim.on("selectmenuchange", () => this.showTimerFields());
-      this.showTimerFields();
+    const $tim = this.$dlg.find("[name=timerType]");
+    orderEnum([
+      Game.Timer.NONE,
+      Game.Timer.TURN,
+      Game.Timer.GAME
+    ], Game.TimerI18N, Game.Timer.NONE, $tim);
+    $tim.on("selectmenuchange", () => this.showTimerFields());
+    this.showTimerFields();
 
-      const $wc = this.$dlg.find("[name=wordCheck]");
-      makeOptions(GameSetupDialog.WordCheck_types, $wc);
+    const $wc = this.$dlg.find("[name=wordCheck]");
+    orderEnum([
+      Game.WordCheck.NONE,
+      Game.WordCheck.AFTER,
+      Game.WordCheck.REJECT
+    ], Game.WordCheckI18N, Game.WordCheck.NONE, $wc);
 
-      const ui = this.options.ui;
-      return Promise.all([
-        ui.promiseEditions()
-        .then(editions => {
-          const $eds = this.$dlg.find("[name=edition]");
-          editions.forEach(e => $eds.append(`<option value="${e}">${e}</option>`));
-          if (ui.getSetting("edition")) {
-            $eds.val(ui.getSetting("edition"));
-            $eds.selectmenu("refresh");
-          }
-        }),
-        ui.promiseDictionaries()
-        .then(dictionaries => {
-          const $dics = this.$dlg.find("[name=dictionary]");
-          dictionaries
-          .forEach(d => $dics.append($(`<option value="${d}">${d}</option>`)));
-          $dics.on("selectmenuchange", () => this.showFeedbackFields());
-          const seldic = ui.getSetting("dictionary");
-          if (seldic)
-            $dics.val(seldic).selectmenu("refresh");
-          this.showFeedbackFields();
-        })
-      ]);
-    });
+    const ui = this.options.ui;
+    return Promise.all([
+      ui.promiseEditions()
+      .then(editions => {
+        const $eds = this.$dlg.find("[name=edition]");
+        editions.forEach(e => $eds.append(`<option value="${e}">${e}</option>`));
+      }),
+      ui.promiseDictionaries()
+      .then(dictionaries => {
+        const $dics = this.$dlg.find("[name=dictionary]");
+        dictionaries
+        .forEach(d => $dics.append($(`<option value="${d}">${d}</option>`)));
+        $dics.on("selectmenuchange", () => this.showFeedbackFields());
+        this.showFeedbackFields();
+      })
+    ])
+    .then(() => super.createDialog());
   }
 
   openDialog() {
-    const ui = this.options.ui;
     return super.openDialog()
     .then(() => {
       this.$dlg.find(".dialog-row").show();
@@ -150,21 +145,15 @@ class GameSetupDialog extends Dialog {
       $fields.each((i, el) => {
         const $el = $(el);
         const field = $el.attr("name");
-        let val = game ? game[field] : (
-          ui.getSetting(field) || Game.DEFAULTS[field]);
-        if (el.tagName === "INPUT" && el.type === "checkbox") {
-          //console.debug("SET", field, "=", val);
+        const val = (game ? game[field] : undefined);
+        // WHY? || ui.getSetting(field);
+        if (el.tagName === "INPUT" && el.type === "checkbox")
           $el.prop("checked", val).checkboxradio("refresh");
-        } else if (el.tagName === "SELECT") {
-          if (typeof val === "undefined")
-            val = this.options.ui.getSetting(field);
-          //console.debug("SELECT", field, "=", val);
-          $el.val(val || "none");
-          $el.selectmenu("refresh");
-        } else if (val) {
-          //console.debug("SET", field, "=", val);
+        else if (el.tagName === "SELECT") {
+          if (typeof val !== "undefined")
+            $el.val(val).selectmenu("refresh");
+        } else
           $el.val(val);
-        }
         return true;
       });
       this.showTimerFields();

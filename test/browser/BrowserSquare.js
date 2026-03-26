@@ -5,17 +5,26 @@
 import { assert } from "chai";
 import { setupPlatform, setup$ } from "../TestPlatform.js";
 
-import { BrowserSquare } from "../../src/browser/BrowserSquare.js";
 import { BrowserTile } from "../../src/browser/BrowserTile.js";
 
 /**
- * Unit tests for Square class
+ * Unit tests for extended Square class in browsers
  */
 describe("browser/BrowserSquare", () => {
 
+  let BrowserSquare;
+
   before(
     () => setupPlatform()
-    .then(() => setup$()));
+    .then(() => setup$())
+    // BrowserSquare requires jquery.i18n which requires jquery, so have
+    // to delay the import
+    .then(() => import("../../src/browser/i18n.js"))
+    .then(() => $.i18n.init("en", "../../i18n"))
+    .then(() => import("../../src/browser/BrowserSquare.js"))
+    .then(mod => {
+      BrowserSquare = mod.BrowserSquare;
+    }));
 
   it('$populate', () => {
     let sq = new BrowserSquare({type: 'q', surface: { id: "base" }, col: 56, row: 42});
@@ -24,10 +33,11 @@ describe("browser/BrowserSquare", () => {
     let $td = $("<td></td>");
     $dact.append($td);
     let $dexp = $("<div></div>");
-    $dexp.append('<td class="square-q score-multiplier ui-droppable" id="base_56x42"><div class="underlay" data-long="QUAD LETTER SCORE" data-short="QL"></div></td>');
+    $dexp.append('<td class="square-q ui-droppable score-multiplier" id="base_56x42"><div class="underlay" data-long="QUAD LETTER SCORE" data-short="QL"></div></td>');
     $("body").append($dexp);
     sq.$populate($td);
-    assert($dact[0].isEqualNode($dexp[0]));
+    assert($dact[0].isEqualNode($dexp[0]),
+          `\nexpected: ${$dexp.html()}\n  actual:${$dact.html()}`);
     $("body").empty();
   });
 
@@ -55,14 +65,14 @@ describe("browser/BrowserSquare", () => {
     sq.$populate($td);
     sq.select(false);
 
-    const $letter = $('<span class="letter">S</span>');
-    const $score = $('<span class="score">0</span>');
+    const $letter = $('<span class="letter letter-scale-1">S</span>');
+    const $score = $('<span class="score score-scale-1">0</span>');
     const $glyph = $('<div class="glyph"></div>');
     $glyph.append($letter).append($score);
     const $tile = $('<div class="Tile ui-draggable ui-draggable-handle unlocked-tile"></div>');
     $tile.append($glyph);
     const $underlay = $('<div class="underlay">T</div>');
-    $td = $('<td class="square-q" id="surface_56x42"></td>');
+    $td = $('<td class="square-q ui-droppable" id="surface_56x42"></td>');
     $td.append($underlay).append($tile);
     $("body").append($('<div id="exp"></div>').append($td));
 
@@ -83,14 +93,14 @@ describe("browser/BrowserSquare", () => {
     sq.$populate($td);
     sq.select(true);
 
-    const $letter = $('<span class="letter">S</span>');
-    const $score = $('<span class="score">0</span>');
+    const $letter = $('<span class="letter letter-scale-1">S</span>');
+    const $score = $('<span class="score score-scale-1">0</span>');
     const $glyph = $('<div class="glyph"></div>');
     $glyph.append($letter).append($score);
     const $tile = $('<div class="Tile ui-draggable ui-draggable-handle unlocked-tile selected"></div>');
     $tile.append($glyph);
     const $underlay = $('<div class="underlay">T</div>');
-    $td = $('<td class="square-q" id="surface_56x42"></td>');
+    $td = $('<td class="square-q ui-droppable" id="surface_56x42"></td>');
     $td.append($underlay).append($tile);
     $("body").append($('<div id="exp"></div>').append($td));
 
@@ -109,13 +119,13 @@ describe("browser/BrowserSquare", () => {
     sq.placeTile(tile, true);
     sq.$populate($td);
 
-    const $letter = $('<span class="letter">W</span>');
-    const $score = $('<span class="score">0</span>');
+    const $letter = $('<span class="letter letter-scale-1">W</span>');
+    const $score = $('<span class="score score-scale-1">0</span>');
     const $glyph = $('<div class="glyph"></div>')
           .append($letter).append($score);
     const $tile = $('<div class="Tile locked-tile"></div>')
           .append($glyph);
-    $td = $('<td class="square-_" id="surface_56x42"></td>').append($tile);
+    $td = $('<td class="square-_ ui-droppable" id="surface_56x42"></td>').append($tile);
     $("body").append($('<div id="exp"></div>').append($td));
 
     const $act = $("#act").children().first();
@@ -137,13 +147,13 @@ describe("browser/BrowserSquare", () => {
     let tile = new BrowserTile({ letter:'W', isBlank:false });
     sq.placeTile(tile); // should $placeTile
 
-    const $letter = $('<span class="letter">W</span>');
-    const $score = $('<span class="score">0</span>');
+    const $letter = $('<span class="letter letter-scale-1">W</span>');
+    const $score = $('<span class="score score-scale-1">0</span>');
     const $glyph = $('<div class="glyph"></div>')
           .append($letter).append($score);
     const $tile = $('<div class="Tile ui-draggable ui-draggable-handle unlocked-tile"></div>')
           .append($glyph);
-    $td = $('<td class="square-_" id="surface_56x42"></td>').append($tile);
+    $td = $('<td class="square-_ ui-droppable" id="surface_56x42"></td>').append($tile);
     const $dexp = $('<div></div>').append($td);
 
     assert($dact[0].isEqualNode($dexp[0]),

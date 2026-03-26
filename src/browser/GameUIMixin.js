@@ -11,10 +11,11 @@ import "jquery-ui";
 
 import "./icon_button.js";
 
-import { stringify } from "../common/Utils.js";
+import { stringify, formatTimeInterval } from "../common/Utils.js";
 import { loadDictionary } from "../game/loadDictionary.js";
 import { Game } from "../game/Game.js";
-import { UI } from "./UI.js";
+import { Commands } from "../game/Commands.js";
+import { Turn } from "../game/Turn.js";
 import { UIEvents } from "./UIEvents.js";
 
 let BEEP;
@@ -208,7 +209,7 @@ const GameUIMixin = superclass => class extends superclass {
    * @param {string} message.text i18n message identifier or plain text
    * @param {string} message.classes additional css classes to apply to
    * message
-   * @param {object[]} args i18n arguments
+   * @param {object[]} message.args i18n arguments
    * @private
    */
   handle_MESSAGE(message) {
@@ -251,9 +252,9 @@ const GameUIMixin = superclass => class extends superclass {
    * @memberof browser/GameUIMixin
    * @instance
    * @param {object} params Parameters
-   * @param {string} gameKey game key
-   * @param {string} playerKey player key
-   * @param {string} clock seconds left for this player to play
+   * @param {Key} params.gameKey game key
+   * @param {Key} params.playerKey player key
+   * @param {number} params.clock seconds left for this player to play
    * @private
    */
   handle_TICK(params) {
@@ -271,7 +272,7 @@ const GameUIMixin = superclass => class extends superclass {
     let remains = params.clock;
     ticked.clock = remains;
 
-    const clocks = UI.formatTimeInterval(remains);
+    const clocks = formatTimeInterval(remains);
 
     let extraClass = "tick-alert-none";
     const allowedSecs = this.game.timeAllowed * 60;
@@ -308,34 +309,35 @@ const GameUIMixin = superclass => class extends superclass {
    * modified the game state.
    * @memberof browser/GameUIMixin
    * @instance
-   * @param {Turn} turn a Turn object
+   * @param {object} params Turn constructor parameters
    * @private
    */
-  handle_TURN(turn) {
-    this.debug("f<b turn ", turn);
+  handle_TURN(params) {
+    const turn = new this.game.constructor.CLASSES.Turn(params);
 
+    this.debug("f<b turn ", turn);
     this.game.pushTurn(turn);
 
-    $("#undoButton").toggle(this.game.allowUndo === true);
+    $("#undo-button").toggle(this.game.allowUndo === true);
 
     this.removeMoveActionButtons();
     const player = this.game.getPlayerWithKey(turn.playerKey);
     const challenger = (typeof turn.challengerKey === "string")
           ? this.game.getPlayerWithKey(turn.challengerKey) : undefined;
 
-    if (turn.type === Game.Turns.CHALLENGE_LOST) {
+    if (turn.type === Turn.Type.CHALLENGE_LOST) {
       challenger.score += turn.score;
       challenger.$refreshScore();
     } else {
-      switch (typeof turn.score) {
-      case "number":
+      if (typeof turn.score === "number") {
         player.score += turn.score;
         player.$refreshScore();
-        break;
-      case "object":
-        for (const delta of turn.score) {
-          const p = this.game.getPlayerWithKey(delta.key);
-          p.score += (delta.tiles || 0) + (delta.time || 0);
+      }
+      if (turn.endStates) {
+        for (let esi = 0; esi < turn.endStates.length; esi++) {
+          const p = this.game.players[esi];
+          const endState = turn.endStates[esi];
+          p.score += (endState.tiles || 0) + (endState.time || 0);
           p.$refreshScore();
         }
       }
@@ -350,8 +352,8 @@ const GameUIMixin = superclass => class extends superclass {
     const wasUs = (player === this.player);
 
     switch (turn.type) {
-    case Game.Turns.CHALLENGE_WON:
-    case Game.Turns.TOOK_BACK:
+    case Turn.Type.CHALLENGE_WON:
+    case Turn.Type.TOOK_BACK:
       if (wasUs)
         this.takeBackTiles();
 
@@ -367,7 +369,7 @@ const GameUIMixin = superclass => class extends superclass {
 
       // Was it us?
       if (wasUs) {
-        if (turn.type === Game.Turns.CHALLENGE_WON) {
+        if (turn.type === Turn.Type.CHALLENGE_WON) {
           if (this.getSetting("warnings"))
             this.playAudio("oops");
           this.notify(
@@ -378,7 +380,7 @@ const GameUIMixin = superclass => class extends superclass {
         }
       }
 
-      if (turn.type == Game.Turns.TOOK_BACK) {
+      if (turn.type == Turn.Type.TOOK_BACK) {
         this.notify(
           $.i18n("nfy-took-backH"),
           $.i18n("nfy-took-backB",
@@ -386,7 +388,7 @@ const GameUIMixin = superclass => class extends superclass {
       }
       break;
 
-    case Game.Turns.CHALLENGE_LOST:
+    case Turn.Type.CHALLENGE_LOST:
       if (this.getSetting("warnings"))
         this.playAudio("oops");
       if (challenger === this.player) {
@@ -394,13 +396,13 @@ const GameUIMixin = superclass => class extends superclass {
         this.notify($.i18n("nfy-you-failedH"),
                     $.i18n("nfy-you-failedB"));
       } else {
-        this.notify($.i18n("nfy-they-failedH"),
-                    $.i18n("nfy-they-failedB", player.name));
+        this.notify($.i18n("nfy-theyfailH"),
+                    $.i18n("nfy-theyfailB", player.name));
       }
 
       break;
 
-    case Game.Turns.PLAYED:
+    case Turn.Type.PLAYED:
       if (wasUs)
         this.takeBackTiles();
       // Take the placed tiles out of the player's rack and
@@ -416,7 +418,7 @@ const GameUIMixin = superclass => class extends superclass {
         this.game.bagToRack(turn.replacements, player);
       break;
 
-    case Game.Turns.SWAPPED:
+    case Turn.Type.SWAPPED:
       if (wasUs)
         this.takeBackTiles();
       // If it was our swap, then the rack was cleared when the command
@@ -428,21 +430,22 @@ const GameUIMixin = superclass => class extends superclass {
 
       break;
 
-    case Game.Turns.GAME_ENDED:
+    case Turn.Type.GAME_ENDED:
       // End of game has been accepted
       if (wasUs)
         this.takeBackTiles();
       this.game.state = Game.State.GAME_OVER;
-      this.setAction("action_anotherGame", $.i18n("Another game?"));
+      this.setAction("action_anotherGame", /*i18n*/"btn-another");
       this.enableTurnButton(true);
       this.notify($.i18n("nfy-game-overH"),
                   $.i18n("nfy-game-overB"));
 
-      if (this.player === this.game.getWinner()) {
-        if (this.getSetting("cheers"))
+      if (this.getSetting("cheers")) {
+        if (this.game.isWinner(this.player))
           this.playAudio("endCheer");
-      } else if (this.getSetting("cheers"))
-        this.playAudio("lost");
+        else
+          this.playAudio("lost");
+      }
 
       return;
     }
@@ -457,9 +460,9 @@ const GameUIMixin = superclass => class extends superclass {
       this.enableTurnButton(false);
     }
 
-    if (turn.nextToGoKey && turn.type !== Game.Turns.CHALLENGE_WON) {
+    if (turn.nextToGoKey && turn.type !== Turn.Type.CHALLENGE_WON) {
 
-      if (turn.type == Game.Turns.PLAYED) {
+      if (turn.type == Turn.Type.PLAYED) {
         if (wasUs) {
           if (this.game.allowTakeBack) {
             this.addTakeBackPreviousButton(turn);
@@ -473,7 +476,7 @@ const GameUIMixin = superclass => class extends superclass {
       }
 
       if (this.isThisPlayer(turn.nextToGoKey)
-          && turn.type !== Game.Turns.TOOK_BACK) {
+          && turn.type !== Turn.Type.TOOK_BACK) {
         // It's our turn next, and we didn't just take back
         this.notify($.i18n("nfy-your-turnH"),
                     $.i18n("nfy-your-turnB",
@@ -501,7 +504,7 @@ const GameUIMixin = superclass => class extends superclass {
   handle_NEXT_GAME(info) {
     this.debug("f<b nextGame", info.gameKey);
     this.game.nextGameKey = info.gameKey;
-    this.setAction("action_nextGame", $.i18n("Next game"));
+    this.setAction("action_nextGame", /*i18n*/"btn-next");
   }
 
   /**
@@ -526,7 +529,7 @@ const GameUIMixin = superclass => class extends superclass {
     if (this.getSetting("warnings"))
       this.playAudio("oops");
     this.$log(true, $.i18n(
-      "word-rejected",
+      "txt-word-rejected",
       rejection.words.length,
       rejection.words.join(", ")), "turn-narrative");
 
@@ -541,27 +544,25 @@ const GameUIMixin = superclass => class extends superclass {
    * @memberof browser/GameUIMixin
    * @instance
    * @param {object} params Parameters
-   * @param {string} params.key game key
-   * @param {string} params.name name of player who paused/released
+   * @param {Key} params.gameKey game key
+   * @param {string} params.playerName name of player who paused/released
    * @private
    */
   handle_PAUSE(params) {
-    this.debug(`f<b pause ${params.name}`);
+    this.debug(`f<b pause ${params.playerName}`);
     $(".Surface .letter").hide();
     $(".Surface .score").hide();
-    $("#pauseDialog > .banner")
-    .text($.i18n("game-paused", params.name));
-    $("#pauseDialog")
+    $("#alertDialog")
     .dialog({
       dialogClass: "no-close",
-      title: $.i18n("title-paused"),
+      title: $.i18n("hey-paused-title", params.playerName),
       modal: true,
       buttons: [
         {
-          text: $.i18n("label-unpause"),
+          text: $.i18n("btn-unpause"),
           click: () => {
-            this.sendCommand(Game.Command.UNPAUSE);
-            $("#pauseDialog").dialog("close");
+            this.sendCommand(Commands.UNPAUSE);
+            $("#alertDialog").dialog("close");
           }
         }
       ]});
@@ -573,15 +574,15 @@ const GameUIMixin = superclass => class extends superclass {
    * @memberof browser/GameUIMixin
    * @instance
    * @param {object} params Parameters
-   * @param {string} params.key game key
-   * @param {string} params.name name of player who paused/released
+   * @param {Key} params.gameKey game key
+   * @param {string} params.playerName name of player who paused/released
    * @private
    */
   handle_UNPAUSE(params) {
-    this.debug(`f<b unpause ${params.name}`);
+    this.debug(`f<b unpause ${params.playerName}`);
     $(".Surface .letter").show();
     $(".Surface .score").show();
-    $("#pauseDialog")
+    $("#alertDialog")
     .dialog("close");
   }
 
@@ -602,19 +603,17 @@ const GameUIMixin = superclass => class extends superclass {
     this.updatePlayerTable();
     this.updateWhosTurn();
     this.updateGameStatus();
-    $("#redoButton").show();
+    $("#redo-button").show();
     $(".last-placement")
     .removeClass("last-placement");
     if (this.game.turns.length === 0)
-      $("#undoButton").hide();
+      $("#undo-button").hide();
     this.lockBoard(!isMyGo);
     this.enableTurnButton(isMyGo);
-    this.$log(true, $.i18n(
-      "undone",
-      turn.type, this.game.getPlayer().name));
-    $("#undoButton")
-    .toggle(this.game.allowUndo
-            && this.game.turns.length > 0);
+    this.$log(true, $.i18n("undone",
+                           $.i18n(Turn.TypeNames[turn.type]),
+                           this.game.getPlayer().name));
+    $("#undo-button").toggle(this.game.allowUndo && this.game.turns.length > 0);
 
     // Trigger an event to wake the automaton (if there is one)
     if (isMyGo)
@@ -688,7 +687,7 @@ const GameUIMixin = superclass => class extends superclass {
     case "!": // Challenge / take back
       {
         const lastTurn = this.game.lastTurn();
-        if (lastTurn && lastTurn.type == Game.Turns.PLAYED) {
+        if (lastTurn && lastTurn.type == Turn.Type.PLAYED) {
           if (this.isThisPlayer(this.game.whosTurnKey))
             // Challenge last move
             this.issueChallenge(lastTurn.playerKey);
@@ -804,7 +803,7 @@ const GameUIMixin = superclass => class extends superclass {
   updatePlayerTable() {
     const $playerTable = this.game.$playerTable(this.player);
     $("#scoresBlock > .playerList").html($playerTable);
-    $(".player-clock").toggle(typeof this.game.timerType !== "undefined");
+    $(".player-clock").toggle(this.game.timerType !== Game.Timer.NONE);
     this.updateWhosTurn();
   }
 
@@ -883,7 +882,7 @@ const GameUIMixin = superclass => class extends superclass {
     game.board.$populate($board);
     this.handle_resize();
 
-    this.$log(true, $.i18n("Game started"), "game-state");
+    this.$log(true, $.i18n("txt-game-start"), "game-state");
 
     game.forEachTurn(
       (turn, isLast) => this.$log(
@@ -892,39 +891,63 @@ const GameUIMixin = superclass => class extends superclass {
     this.$log(true, ""); // Force scroll to end of log
 
     if (game.turns.length > 0)
-      $("#undoButton").toggle(this.game.allowUndo ? true : false);
+      $("#undo-button").toggle(this.game.allowUndo ? true : false);
 
     if (game.hasEnded()) {
       if (game.nextGameKey)
-        this.setAction("action_nextGame", $.i18n("Next game"));
+        this.setAction("action_nextGame", /*i18n*/"btn-next");
       else
-        this.setAction("action_anotherGame", $.i18n("Another game?"));
+        this.setAction("action_anotherGame", /*i18n*/"btn-another");
     }
 
-    $("#pauseButton").toggle(game.timerType ? true : false);
+    $("#pause-button")
+    .icon_button({ icon: "pause-icon" })
+    .toggle(game.timerType !== Game.Timer.NONE);
 
-    $("#distributionButton")
+    $("#distribution-button")
     .on("click", () => this.showLetterDistributions());
 
-    $("#undoButton")
+    $("#undo-button")
+    .icon_button({ icon: "undo-icon" })
     .on(
       "click", () => {
         // unplace any pending move
         this.takeBackTiles();
-        this.sendCommand(Game.Command.UNDO);
+        this.sendCommand(Commands.UNDO);
       });
 
-    $("#redoButton")
+    $("#redo-button")
+    .icon_button({ icon: "redo-icon" })
     .hide()
     .on(
       "click", () => {
         if (this.undoStack.length > 0) {
           const turn = this.undoStack.pop();
-          this.sendCommand(Game.Command.REDO, turn);
+          this.sendCommand(Commands.REDO, turn);
           if (this.undoStack.length === 0)
-            $("#redoButton").hide();
+            $("#redo-button").hide();
         }
       });
+
+    if (this.player) {
+      $("#shuffle-button")
+      .addClass("fat-button")
+      .icon_button({ icon: "shuffle-icon" })
+      .on("click", () => this.player.rack.shuffle());
+
+      $("#unplace-button")
+      .addClass("fat-button")
+      .icon_button({ icon: "unplace-icon" })
+      .on("click", () => this.takeBackTiles());
+
+      $(".action-button")
+      .button()
+      .on("click", () => this.click_actionButton());
+
+    } else {
+      $("#shuffle-button").hide();
+      $(".action-button").hide();
+    }
 
     let myGo = this.isThisPlayer(game.whosTurnKey);
     this.updateWhosTurn();
@@ -934,8 +957,8 @@ const GameUIMixin = superclass => class extends superclass {
     this.updateGameStatus();
 
     const lastTurn = game.lastTurn();
-    if (lastTurn && (lastTurn.type === Game.Turns.PLAYED
-                     || lastTurn.type === Game.Turns.CHALLENGE_LOST)) {
+    if (lastTurn && (lastTurn.type === Turn.Type.PLAYED
+                     || lastTurn.type === Turn.Type.CHALLENGE_LOST)) {
       if (this.isThisPlayer(lastTurn.playerKey)) {
         // It isn't our turn, but we might still have time to
         // change our minds on the last move we made
@@ -944,33 +967,6 @@ const GameUIMixin = superclass => class extends superclass {
       } else
         // It wasn't our go, enable a challenge
         this.addChallengePreviousButton(lastTurn);
-    }
-
-    if (this.player) {
-      $(".shuffle-button")
-      .button({
-        showLabel: false,
-        icon: "shuffle-icon",
-        classes: {
-          "ui-button-icon": "fat-icon"
-        }
-      })
-      .on("click", () => this.player.rack.shuffle());
-
-      $(".unplace-button").button({
-        showLabel: false,
-        icon: "unplace-icon",
-        classes: {
-          "ui-button-icon": "fat-icon"
-        }
-      })
-      .on("click", () => this.takeBackTiles());
-
-      $(".action-button")
-      .on("click", () => this.click_actionButton());
-    } else {
-      $(".shuffle-button").hide();
-      $(".action-button").hide();
     }
 
     if (game.pausedBy)
@@ -1015,8 +1011,7 @@ const GameUIMixin = superclass => class extends superclass {
 
     // A turn has been taken. turn is a Turn
     .on(Game.Notify.TURN,
-        turn => this.handle_TURN(
-          new this.game.constructor.CLASSES.Turn(turn)))
+        params => this.handle_TURN(params))
 
     // Backend clock tick.
     .on(Game.Notify.TICK,
@@ -1070,8 +1065,8 @@ const GameUIMixin = superclass => class extends superclass {
     const available = landscape ? (wh * 0.9) : Math.min(ww, wh * 0.9);
     // A .Surface td has a 2px border-width
     const $aTD = $(".Surface td").first();
-    const bl = parseInt($aTD.css("border-left"));
-    const br = parseInt($aTD.css("border-right"));
+    const bl = parseFloat($aTD.css("border-left"));
+    const br = parseFloat($aTD.css("border-right"));
     const tdSize = available / sz - (bl + br);
     this.editCSSRule(".Surface td", {
       width: tdSize,
@@ -1125,8 +1120,8 @@ const GameUIMixin = superclass => class extends superclass {
       $("body").focus();
     });
 
-    $("#pauseButton")
-    .on("click", () => this.sendCommand(Game.Command.PAUSE));
+    $("#pause-button")
+    .on("click", () => this.sendCommand(Commands.PAUSE));
 
     // Events raised by game components
     $(document)
@@ -1189,7 +1184,7 @@ const GameUIMixin = superclass => class extends superclass {
    * move.
    * @memberof browser/GameUIMixin
    * @instance
-   * @param {number} col column deltae
+   * @param {number} col column delta
    * @param {number} row row delta
    * @private
    */
@@ -1255,14 +1250,22 @@ const GameUIMixin = superclass => class extends superclass {
         // Selecting a different square
       }
       else {
-        // The selected square has a tile on it. Is the square
-        // being selected empty?
+        // The selected square has a tile on it.
+        if (square) {
+          if (square.isEmpty()) {
+            // Square being moved to is empty, so this is a move
+            const fromSquare = this.selectedSquare;
+            // clear the selection, should remove .selected from the
+            // fromSquare.tile.$ui
+            this.selectSquare();
+            this.moveTile(fromSquare, square);
+            return;
 
-        if (square && square.isEmpty()) {
-          // It's empty, so this is a move
-          this.moveTile(this.selectedSquare, square);
-          this.selectSquare();
-          return;
+          } else if (!square.isBoard
+                     && square.surface === this.selectedSquare.surface) {
+            // Both squares are on the same rack and both have tiles,
+            // Do nothing
+          }
         }
 
         if (isLocked)
@@ -1343,12 +1346,33 @@ const GameUIMixin = superclass => class extends superclass {
    * @private
    */
   dropTile(fromSquare, toSquare) {
-    if (fromSquare.tile) {
-      this.selectSquare();
-      this.moveTile(fromSquare, toSquare);
-      if (this.getSetting("tile_click"))
-        this.playAudio("tiledown");
+    if (toSquare === fromSquare)
+      return;
+    if (!fromSquare.tile)
+      return;
+    this.selectSquare(); // clear selection
+    let float;
+    if (toSquare.tile) {
+      // The target square is occupied
+      if (toSquare.isBoard || fromSquare.isBoard) {
+        // Can't drop a tile onto a placed tile on the board, or
+        // from the board to a placed tile on a rack
+        if (this.getSetting("tile_click"))
+          this.playAudio("nogo");
+        return;
+      }
+
+      // They are both in a rack (any rack), so we want to swap the tiles.
+      // First float off the tile on the toSquare.
+      float = toSquare.unplaceTile();
     }
+    this.moveTile(fromSquare, toSquare);
+    if (float) {
+      // Replace the tile floated off the toSquare on the fromSquare
+      fromSquare.placeTile(float);
+      this.playAudio("tileswap");
+    } else if (this.getSetting("tile_click"))
+      this.playAudio("tiledown");
   }
 
   /**
@@ -1483,14 +1507,12 @@ const GameUIMixin = superclass => class extends superclass {
       return;
     }
 
-    // If the last player's rack is empty, it couldn't be refilled
-    // and the game might be over.
-    const lastPlayer = this.game.previousPlayer();
-    if (lastPlayer && lastPlayer.rack.isEmpty()) {
+    // If any player's rack is empty, offer "Acccept last move".
+    const finishedPlayer = this.game.getPlayerWithNoTiles();
+    if (finishedPlayer && finishedPlayer.key !== this.player.key) {
       this.lockBoard(true);
       if (this.player.key === this.game.whosTurnKey)
-        this.setAction("action_confirmGameOver",
-                       $.i18n("Accept last move"));
+        this.setAction("action_confirmGameOver", /*i18n*/"btn-accept");
       else
         $(".action-button").hide();
       return;
@@ -1499,7 +1521,7 @@ const GameUIMixin = superclass => class extends superclass {
     // Check if player has placed any tiles
     if (this.game.board.hasUnlockedTiles()) {
       // move action is to make the move
-      this.setAction("action_commitMove", $.i18n("Finished Turn"));
+      this.setAction("action_commitMove", /*i18n*/"btn-done");
       // Check that the play is legal
       const move = this.game.board.analysePlay();
       const $move = $("#playBlock > .your-move");
@@ -1517,7 +1539,7 @@ const GameUIMixin = superclass => class extends superclass {
       }
 
       // Use 'visibility' and not 'display' to keep the layout stable
-      $(".unplace-button").css("visibility", "inherit");
+      $("#unplace-button").css("visibility", "inherit");
 
       $("#swapRack").hide();
       return;
@@ -1527,18 +1549,18 @@ const GameUIMixin = superclass => class extends superclass {
 
     if (this.swapRack.squaresUsed() > 0) {
       // Swaprack has tiles on it, change the move action to swap
-      this.setAction("action_swap", $.i18n("Swap"));
+      this.setAction("action_swap", /*i18n*/"btn-swap");
       this.lockBoard(true);
       this.enableTurnButton(true);
-      $(".unplace-button").css("visibility", "inherit");
+      $("#unplace-button").css("visibility", "inherit");
       return;
     }
 
     // Otherwise nothing has been placed, turn action is a pass
-    this.setAction("action_pass", $.i18n("Pass"));
+    this.setAction("action_pass", /*i18n*/"btn-pass");
     this.lockBoard(false);
     this.enableTurnButton(true);
-    $(".unplace-button").css("visibility", "hidden");
+    $("#unplace-button").css("visibility", "hidden");
   }
 
   /**
@@ -1578,7 +1600,7 @@ const GameUIMixin = superclass => class extends superclass {
     if (!player)
       return;
     const text = $.i18n(
-      "button-challenge", player.name);
+      "btn-challenge", player.name);
     const $button =
           $(`<button>${text}</button>`)
           .addClass("moveAction")
@@ -1598,7 +1620,7 @@ const GameUIMixin = superclass => class extends superclass {
   addTakeBackPreviousButton() {
     const $button =
           $(`<button name="takeBack" class="moveAction"></button>`)
-          .text($.i18n("Take back"))
+          .text($.i18n("btn-takeback"))
           .button()
           .on("click", () => this.takeBackMove());
     this.$log(true, $button, "turn-control");
@@ -1623,14 +1645,14 @@ const GameUIMixin = superclass => class extends superclass {
    */
   issueChallenge(challengedKey) {
     this.takeBackTiles();
-    this.sendCommand(Game.Command.CHALLENGE, {
+    this.sendCommand(Commands.CHALLENGE, {
       challengedKey: challengedKey
     });
   }
 
   /**
    * Handler for the 'Make Move' button. Invoked via 'click_actionButton'.
-   * Response will be turn type Game.Turns.PLAYED (or Game.Turns.TOOK_BACK if the play
+   * Response will be turn type Turn.Type.PLAYED (or Turn.Type.TOOK_BACK if the play
    * is rejected).
    * @memberof browser/GameUIMixin
    * @instance
@@ -1647,19 +1669,19 @@ const GameUIMixin = superclass => class extends superclass {
     if (bonus > 0 && this.getSetting("cheers"))
       this.playAudio("bonusCheer");
 
-    this.sendCommand(Game.Command.PLAY, move);
+    this.sendCommand(Commands.PLAY, move);
   }
 
   /**
    * Handler for the 'Take back' button clicked. Invoked via
-   * 'click_actionButton'. Response will be a turn type Game.Turns.TOOK_BACK.
+   * 'click_actionButton'. Response will be a turn type Turn.Type.TOOK_BACK.
    * @memberof browser/GameUIMixin
    * @instance
    * @private
    */
   takeBackMove() {
     this.takeBackTiles();
-    this.sendCommand(Game.Command.TAKE_BACK);
+    this.sendCommand(Commands.TAKE_BACK);
   }
 
   /**
@@ -1670,7 +1692,7 @@ const GameUIMixin = superclass => class extends superclass {
    */
   action_pass() {
     this.takeBackTiles();
-    this.sendCommand(Game.Command.PASS);
+    this.sendCommand(Commands.PASS);
   }
 
   /**
@@ -1682,7 +1704,7 @@ const GameUIMixin = superclass => class extends superclass {
    */
   action_confirmGameOver() {
     this.takeBackTiles();
-    this.sendCommand(Game.Command.CONFIRM_GAME_OVER);
+    this.sendCommand(Commands.CONFIRM_GAME_OVER);
   }
 
   /* c8 ignore start */
@@ -1695,7 +1717,7 @@ const GameUIMixin = superclass => class extends superclass {
    * @abstract
    */
   action_anotherGame() {
-    assert.fail("GameUIMixin.action_nextGame");
+    assert.fail("GameUIMixin.action_anotherGame");
   }
 
   /**
@@ -1718,11 +1740,23 @@ const GameUIMixin = superclass => class extends superclass {
    * @private
    */
   action_swap() {
-    const tiles = this.swapRack.empty();
+    // Cannot swap unless we know the letter bag has enough tiles
+    const remains = this.game.letterBag.remainingTileCount();
+    const swapsies = this.swapRack.letters();
+    if (swapsies.length > remains) {
+      $("#alertDialog")
+      .dialog({
+        modal: true,
+        title: $.i18n("hey-cant-swap-title", swapsies.length)
+      })
+      .html($.i18n("hey-cant-swap-body", remains));
+      return;
+    }
     // Move the swapRack tiles back to the playRack until the play
     // is confirmed
+    const tiles = this.swapRack.empty();
     this.player.rack.addTiles(tiles);
-    this.sendCommand(Game.Command.SWAP, tiles);
+    this.sendCommand(Commands.SWAP, tiles);
   }
 
   /**
@@ -1730,14 +1764,14 @@ const GameUIMixin = superclass => class extends superclass {
    * @memberof browser/GameUIMixin
    * @instance
    * @param {string} action function name e.g. action_commitMove
-   * @param {string} title button title e.g. "Commit Move"
+   * @param {string} title i18n identifier for button title e.g. "btn-pass"
    */
   setAction(action, title) {
     if (this.player) {
       $(".action-button")
       .data("action", action)
       .empty()
-      .append(title)
+      .append($.i18n(title))
       .show();
     }
   }
@@ -1791,7 +1825,8 @@ const GameUIMixin = superclass => class extends superclass {
    * @memberof browser/GameUIMixin
    * @instance
    * @param {Square} square the square with the tile being taken back
-   * @return {boolean} true if a tile was returned
+   * @return {boolean} true if a tile was returned, false if the square
+   * didn't contain a Tile, or the Tile on the square was locked on.
    * @private
    */
   takeBackTile(square) {
@@ -1858,7 +1893,7 @@ const GameUIMixin = superclass => class extends superclass {
       const notification = new Notification(
         title,
         {
-          icon: "../images/favicon.ico",
+          icon: "../images/xanado_favicon.png",
           body: body
         });
       this._notification = notification;

@@ -123,7 +123,6 @@ const Replay = superclass => class extends superclass {
   step() {
     // Copy the turn to avoid accidental overwrite
     const turn = new Turn(this.game.turns[this.nextTurn++]);
-    turn.gameKey = this.key;
     return this.redo(turn) // redo comes from Undo.js
     .then(() => {
       /* c8 ignore next 5 */

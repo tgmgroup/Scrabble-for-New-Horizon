@@ -114,7 +114,7 @@ $.i18n.init = (locale, data_url, dbg) => {
  * Get the current locale
  * @return { string} the current locale string
  */
-$.i18n.locale = () => $.banana.locale;
+$.i18n.locale = () => $.banana ? $.banana.locale : undefined;
 
 /**
  * jQuery plugin to translate all elements in DOM that have

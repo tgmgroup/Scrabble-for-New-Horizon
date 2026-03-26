@@ -9,12 +9,13 @@
 import "jquery";
 import "jquery-ui";
 
+import { parseURLArguments, makeURL } from "../common/Utils.js";
 import { Game } from "../game/Game.js";
 const Player = Game.CLASSES.Player;
 import { Edition } from "../game/Edition.js";
 import { BackendGame } from "../backend/BackendGame.js";
 import { BrowserDatabase } from "../browser/BrowserDatabase.js";
-import { UI } from "../browser/UI.js";
+import { UIEvents } from "../browser/UIEvents.js";
 
 /**
  * For promiseDefaults.
@@ -24,7 +25,8 @@ const DEFAULT_USER_SETTINGS = {
   // User settings
   one_window: true,
 	notification: false, // requires https
-	theme: "default",
+	layout: "default",
+  language: "en",
   jqTheme: "pepper-grinder",
 	warnings: true,
 	cheers: true,
@@ -77,7 +79,7 @@ const StandaloneUIMixin = superclass => class extends superclass {
 
   /**
    * Arguments passed in the URL and parsed out using
-   * {@linkcode UI#parseURLArguments}
+   * {@linkcode Utils#parseURLArguments}
    * @member {object}
    */
   args = undefined;
@@ -120,9 +122,11 @@ const StandaloneUIMixin = superclass => class extends superclass {
     if (session === null) {
       // null means key does not exist
       // see https://developer.mozilla.org/en-US/docs/Web/API/Storage/getItem
-      if (typeof Game.DEFAULTS[key] === "undefined")
+      if (typeof Game.DEFAULTS[key] === "undefined") {
+        if (key === "language")
+          return $.i18n.locale() || DEFAULT_USER_SETTINGS.language;
         return DEFAULT_USER_SETTINGS[key];
-      else
+      } else
         return Game.DEFAULTS[key];
     } else
       return session;
@@ -142,13 +146,13 @@ const StandaloneUIMixin = superclass => class extends superclass {
   }
 
   /**
-   * @implements UI#promiseCSS
+   * @implements UI#promiseLayouts
    * @memberof standalone/StandaloneUIMixin
    * @instance
    * @override
    */
-  promiseCSS() {
-    return Platform.readFile(Platform.getFilePath("css/index.json"));
+  promiseLayouts() {
+    return Platform.getJSON(Platform.absolutePath("css/index.json"));
   }
 
   /**
@@ -158,7 +162,7 @@ const StandaloneUIMixin = superclass => class extends superclass {
    * @override
    */
   promiseLocales() {
-    return Platform.readFile(Platform.getFilePath("i18n/index.json"));
+    return Platform.getJSON(Platform.absolutePath("i18n/index.json"));
   }
 
   /**
@@ -168,7 +172,7 @@ const StandaloneUIMixin = superclass => class extends superclass {
    * @override
    */
   promiseEditions() {
-    return Platform.readFile(Platform.getFilePath("editions/index.json"));
+    return Platform.getJSON(Platform.absolutePath("editions/index.json"));
   }
 
   /**
@@ -178,7 +182,7 @@ const StandaloneUIMixin = superclass => class extends superclass {
    * @override
    */
   promiseDictionaries() {
-    return Platform.readFile(Platform.getFilePath("dictionaries/index.json"));
+    return Platform.getJSON(Platform.absolutePath("dictionaries/index.json"));
   }
 
   /**
@@ -242,10 +246,10 @@ const StandaloneUIMixin = superclass => class extends superclass {
    * @return {string} the new url
    */
   redirectToGame(key) {
-    const parts = UI.parseURLArguments(window.location.toString());
+    const parts = parseURLArguments(window.location.toString());
     parts._URL = parts._URL.replace(/standalone_games./, "standalone_game.");
     parts.game = key;
-    const nurl = UI.makeURL(parts);
+    const nurl = makeURL(parts);
     if (this.getSetting("one_window"))
       location.replace(nurl);
     else
@@ -260,11 +264,25 @@ const StandaloneUIMixin = superclass => class extends superclass {
    * @memberof standalone/StandaloneUIMixin
    */
   create() {
-    this.args = UI.parseURLArguments(document.URL);
+    this.args = parseURLArguments(document.URL);
     if (this.args.debug)
       this.debug = console.debug;
 
     this.session.key = this.constructor.HUMAN_KEY;
+  }
+
+  /**
+   * @implements browser/GamesUIMixin#attachUIEventHandlers
+   * @override
+   */
+  attachUIEventHandlers() {
+    super.attachUIEventHandlers();
+
+    // Custom UI event for joining a game
+    $(document)
+    .on(UIEvents.JOIN_GAME, (event, key) => {
+      this.redirectToGame(key);
+    });
   }
 };
 

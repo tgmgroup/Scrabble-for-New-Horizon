@@ -5,6 +5,7 @@
 import { assert } from "chai";
 import { setupPlatform, setup$ } from "../TestPlatform.js";
 import { Game } from "../../src/game/Game.js";
+import { Turn } from "../../src/game/Turn.js";
 import { GamesUIMixin } from "../../src/browser/GamesUIMixin.js";
 
 describe("browser/GamesUIMixin", () => {
@@ -75,7 +76,7 @@ describe("browser/GamesUIMixin", () => {
           { key: "player1", name: "one", score: -999 }
         ],
         turns: [
-          { state: Game.Turns.GAME_ENDED }
+          { state: Turn.Type.GAME_ENDED }
         ]
       },
       {
@@ -97,8 +98,8 @@ describe("browser/GamesUIMixin", () => {
 
     return ui.readyToListen()
     .then(() => {
-      const p1 = $.i18n("leader-board-row", 1, "one", 1, 2, 3);
-      const p2 = $.i18n("leader-board-row", 2, "two", 4, 5, 6);
+      const p1 = $.i18n("txt-leader", 1, "one", 1, 2, 3);
+      const p2 = $.i18n("txt-leader", 2, "two", 4, 5, 6);
       let html = $("body").html();
       assert(html.indexOf(p1) > 0);
       assert(html.indexOf(p2) > 0);
@@ -108,7 +109,7 @@ describe("browser/GamesUIMixin", () => {
       assert(html.indexOf("game2") > 0);
       // Detailed construction of table rows tested in BrowserGame
 
-      // Clicking on a gameTableRow should invoke GameDialog, which
+      // Clicking on a TR should invoke GameDialog, which
       // will invoke $player.
       // No testing here, see GameDialog.js for that.
       $("#game1").trigger("click");

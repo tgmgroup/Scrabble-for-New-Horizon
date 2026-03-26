@@ -1,43 +1,24 @@
 # XANADO
 
-## Multiplayer word grid game Server and Web Interface
+## Word grid game
 
 Play a variety of SCRABBLE®-like games against the computer, or host
 your own web server to play games against friends and family.
 
-Includes tile sets for many languages, and dictionaries in English,
-French, German, and Catalan, and it's easy to add more.
+You can try it [here](https://cdot.github.io/Xanado/dist/standalone_games.html)!
+
 <p style="text-align:center;">
 <img src="/images/splash.png" width="265" height="300" alt="Board" />
 </p>
 
 * Has a single-player version which runs entirely in the browser, and a multi-player version which uses a host server.
-* You can play against a computer player, and/or other people.
+* You can play against a computer player, and/or against other people.
 * Play against the clock if you want to.
-* Supports different board layouts and tile sets, and makes it easy to define your own.
-* Has several different dictionaries in a number of languages, and it's easy to add your own.
+* Supports several different board layouts, and you can even define your own.
+- Includes sets of tiles for many different languages, and it's easy to add more.
+* Has dictionaries in a number of languages, and it's straightforward to add your own.
 * Supports logins, which helps you to set up tournaments and record long-term player performance (server version only).
 * Players can use the dictionary to explore alternative moves (i.e. cheat).
-* It includes Scrabble tile sets for many different languages.
-
-## Background
-
-While there are a number of freely accessible servers out there
-offering clones of the classic SCRABBLE® game, I wanted a game I
-could host on my own server, and experiment with different
-dictionaries, board layouts, tile sets, and rule combinations. And I
-wanted it to be completely free. The public servers I found didn't
-work for me because:
-
-- Their code is not public, and setting up your own server is not an option.
-- They are generally limited to a single version of the game.
-- Their (English) dictionaries are usually based on the standard American Scrabble Tournament dictionary, which is stuffed full of obscure words that only a dedicated aficionado would know. This makes their robot games inaccessible for casual players, as a computer player will beat them every time.
-- They plague you with tedious advertisements and in-app purchases.
-
-Enter [Hans Hübner's html-scrabble](https://github.com/hanshuebner/html-scrabble), which this is a fork of.
-I started out working on their code but rapidly realised the scope and
-number of changes I intended required a fork, rather than bothering
-them with hundreds of pull requests.
 
 # Installation
 
@@ -57,13 +38,13 @@ browsers tested so far. Oldest tested versions are:
 If you want to play the single-player version against the computer, then all
 you have to do is to visit a server where it has been installed.
 Nothing is saved back to the server. Games are saved in the `localStorage`
-area in your browser which has a limited size, so don't get too carried away.
+area in your browser which has a limited size, so don't get too carried away!
 
 You can try it [here](https://cdot.github.io/Xanado/dist/standalone_games.html).
 
 ## Multi-player (client-server)
 
-### Docker
+### [Docker](https://www.docker.com)
 The simplest way to install the server is to use the latest Docker
 image, which you can find on [github](https://github.com/cdot/Xanado/pkgs/container/xanado).
 The Docker image takes care of all dependencies for you. Download the image and:
@@ -80,15 +61,6 @@ $ npm install --global @cdot/xanado
 ```
 
 ### Developers
-```
-git clone https://github.com/cdot/Xanado.git
-cd Xanado
-npm install
-npm run build
-```
-This clones the repository locally, then installs the dependencies.
-Finally it builds the client code.
-
 There is developer documentation [here](DEVELOPING.md).
 
 ### Configuring the server
@@ -155,7 +127,7 @@ may be more suitable for less experienced players.
 Single-player games always have a robot.
 
 The installation comes with a number of 'editions' that emulate some
-commercially available games - SCRABBLE®, Super SCRABBLE®, Lexulous,
+commercially available games - SCRABBLE®, Super SCRABBLE®, Lexulous®,
 and Words With Friends® - all of which have very similar
 gameplay. And it's not too hard to create your own custom game, too.
 
@@ -212,15 +184,18 @@ The following editions are included:
 # Dictionaries
 The `/dictionaries` directory contains the
 dictionaries. Included with the installation are a number of pre-built dictionaries:
-- `CSW2019_English` - 280K words from the Collins Scrabble Words 2019 dictionary
-- `SOWPODS_English` - 409K words from an [unofficial version](https://www.wordgamedictionary.com/sowpods/download/sowpods.txt) of the standard European English SCRABBLE® competition dictionary.
-- `German` - 404k word list from the [germandict project on Sourceforge](https://sourceforge.net/projects/germandict/files/).
-- `British_English` - a custom 68k word British English dictionary, designed for casual players, to reflect the average vocabulary of a university-educated Briton. Note that many American spellings are also included, to reflect the flexible nature of our shared language.
-- `ODS8_French` - 411k word French SCRABBLE® competition dictionary.
-- `Oxford_5000` - 29K English words derived from the [Oxford Learner's Dictionary](https://www.oxfordlearnersdictionaries.com/wordlists/oxford3000-5000)
-- `DISC_Catalan` - 580k word Catalan.
+- `CSW2019_English` - 279496 words from the Collins Scrabble Words 2019 dictionary
+- `CSW2021_English` - 279077 word bowdlerized version of CS2019, now the official dictionary for tournament play in most places
+- `SOWPODS_English` - 267753 words from an [unofficial version](https://www.wordgamedictionary.com/sowpods/download/sowpods.txt) of the standard European English SCRABBLE® competition dictionary. Now replaced in most competitions by CSW2021.
+- `German` - 404014 word list from the [germandict project on Sourceforge](https://sourceforge.net/projects/germandict/files/).
+- `British_English` - a custom 67896 word British English dictionary, designed for casual players, to reflect the average vocabulary of a university-educated Briton. Note that many American spellings are also included, to reflect the flexible nature of our shared language.
+- `ODS8_French` - 411430 word French SCRABBLE® competition dictionary.
+- `Oxford_5000` - 29485 English words derived from the [Oxford Learner's Dictionary](https://www.oxfordlearnersdictionaries.com/wordlists/oxford3000-5000)
+- `DISC_Catalan` - 582236 Catalan words.
 
 See [DEVELOPING](DEVELOPING.md) for help on creating your own dictionary.
+
+To help in dictionary development there is a simple user interface that lets you explore anagrams and hangmen arrangements of letters in the various dictionaries. You can find it [here](https://cdot.github.io/Xanado/html/solver.html).
 
 ## Whitelists
 Regenerating a dictionary can be time consuming, so dictionaries can
@@ -242,6 +217,10 @@ HTTPS you require an SSL certificate. See
 https://linuxize.com/post/creating-a-self-signed-ssl-certificate/
 for instructions.
 
+Note that by default the server binds to `0.0.0.0:9093`. You can make it
+bind to a specific host and/or different port using the
+[configuration options](CONFIGURATION.md).
+
 # Development
 
 Further development is welcome, especially:
@@ -258,7 +237,11 @@ See [DEVELOPING](DEVELOPING.md) for more.
 - [Lexulous](http://lexulous.com) is a registered trademark of RJ Softwares, 8th Floor, Lansdowne Court, 5B Sarat Bose Road, Kolkata, India 700020
 
 This not-for-profit project is not associated with any of the owners
-of the aforementioned brands.
+of the aforementioned trade marks.
+
+The name "XANADO" is also used by a number of other businesses /
+individuals. This not-for-profit project is not associated with any of
+these businesses.
 
 ## Privacy
 
@@ -267,22 +250,23 @@ Xanado is hosted on your own server and doesn't store any information about you 
 ## CODE COPYRIGHT AND LICENSE
 
 The current code was written by Crawford Currie and is
-Copyright &copy; 2021-2023 Xanado Project. However it is
-built on the work of many people. All these individuals
+Copyright &copy; 2021-2024 Xanado Project. However it is
+built on the work of [many people](#CONTRIBUTORS). All these individuals
 are acknowledged as sharing the copyright to parts of the work.
 
 The code is licensed under the terms of the
 [MIT license](https://en.wikipedia.org/wiki/MIT_License)
 as the most restrictive of the licenses of the contributory works.
 
-## Contributors
+## CONTRIBUTORS
 Xanado builds on previous work by many people, most notably Hans
 Hübner, Daniel Weck, Elijah Sawyers, Andrew Appel, Guy Jacobsen, and
 Joshua Lewis, and the many people who they in turn based their work
 on.
 
-A large number of [npm](https://www.npmjs.com/) modules are used, for
-which their authors are acknowledged and thanked.
+A large number of [npm](https://www.npmjs.com/) modules are used,
+directly or indirectly, for which their authors are acknowledged and
+thanked.
 
 This project is tested with [BrowserStack](https://www.browserstack.com/)
 
@@ -292,3 +276,5 @@ Direct contributors to Xanado are (in alphabetical order)
 - Joan Montané
 - Paul Kolano
 - Warren Bank
+
+All sounds were downloaded from [freesound.org](audio/ACKNOWLEDGEMENTS.md).

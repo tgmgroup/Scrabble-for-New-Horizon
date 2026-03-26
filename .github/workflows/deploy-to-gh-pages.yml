@@ -1,8 +1,8 @@
-# Simple workflow for deploying static content to GitHub Pages
-name: Deploy static content to Pages
+# Deploy to GitHub Pages. This is automatically run on a push to "master". Note that this means that
+# github pages can be ahead of "release".
+name: Deploy the "master" branch to Github Pages
 
 on:
-  # Runs on pushes targeting the default branch
   push:
     branches: ["master"]
 
@@ -28,20 +28,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
+
       - name: Build
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
-          node-version: 16
+          node-version: 22
       - run: npm install
       - run: npm run build
+
       - name: Setup Github pages
-        uses: actions/configure-pages@v2
+        uses: actions/configure-pages@v5
+
       - name: Build and upload artifact
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v3
         with:
           # Upload entire repository (including dist, which we just built)
           path: '.'
+
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v1
+        uses: actions/deploy-pages@v4

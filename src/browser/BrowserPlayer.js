@@ -23,29 +23,42 @@ class BrowserPlayer extends Player {
    * @param {Player?} uiPlayer the current player in the UI
    * @return {jQuery} jQuery object for the score table
    */
-  $tableRow(uiPlayer) {
+  $TR(uiPlayer) {
     const $tr = $(`<tr id="player${this.key}"></tr>`)
           .addClass("player-row");
+
+    // "current player" marker
     if (this === uiPlayer)
       $tr.addClass("whosTurn");
     $tr.append(`<td class="turn-pointer">&#10148;</td>`);
+
+    // Player type, robot or human
     const $icon = $('<div class="ui-icon"></div>');
     $icon.addClass(this.isRobot ? "icon-robot" : "icon-person");
     $tr.append($(document.createElement("td")).append($icon));
+
+    // Player name
     const who = this === uiPlayer ? $.i18n("You") : this.name;
     const $name = $(`<td class="player-name">${who}</td>`);
+    $tr.append($name);
+
+    // Are they due to miss the next turn?
     if (this.missNextTurn)
       $name.addClass("miss-turn");
-    $tr.append($name);
+
+    // Remaining tile count; updated in GameUIMixin.updateTileCounts
     $tr.append('<td class="remaining-tiles"></td>');
 
-    // Robots are always connected
+    // Robots are always connected, humans may or may not be
     const $status = $(`<td class='connect-state'>${BLACK_CIRCLE}</td>`);
     $status.addClass(
       this._isConnected || this.isRobot ? "online" : "offline");
     $tr.append($status);
 
-    $tr.append(`<td class='score'>${this.score}</td>`);
+    // Player score; updated in $refreshScore
+    $tr.append(`<td class='player-score'>${this.score}</td>`);
+
+    // Player clock, updated in GameUIMixin.handle_TICK
     $tr.append(`<td class='player-clock'></td>`);
 
     return $tr;
@@ -57,7 +70,7 @@ class BrowserPlayer extends Player {
    * @memberof browser/PlayerMixin
    */
   $refreshScore() {
-    $(`#player${this.key} .score`).text(this.score);
+    $(`#player${this.key} .player-score`).text(this.score);
   }
 
   /**

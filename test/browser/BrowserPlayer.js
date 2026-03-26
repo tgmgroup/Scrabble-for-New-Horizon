@@ -31,21 +31,21 @@ describe("browser/BrowserPlayer", () => {
     $tr[0].id = `player${p.key}`;
     $tr.append("<td class='turn-pointer'>&#10148;</td>");
     $tr.append("<td><div class='ui-icon icon-robot'></div></td>");
-    $tr.append(`<td class="player-name miss-turn">${p.name}</td>`);
+    $tr.append(`<td class="player-name">${p.name}</td>`);
     $tr.append("<td class='remaining-tiles'></td>");
     $tr.append(`<td class="connect-state online">●</td>`);
-    $tr.append("<td class='score'>0</td>");
+    $tr.append("<td class='player-score'>0</td>");
     $tr.append("<td class='player-clock'></td>");
 
     player.online(false);
 
-    const $act = player.$tableRow();
+    const $act = player.$TR();
     assert($act[0].isEqualNode($tr[0]),
            `expected: ${$tr.html()}\n actual: ${$act.html()}`);
     player.score = 666;
-    $("body").append("<div id='playerplayerkey'><div class='score'>fail</div></div>");
+    $("body").append("<div id='playerplayerkey'><div class='player-score'>fail</div></div>");
     player.$refreshScore();
-    assert.equal($("#playerplayerkey .score").text(), player.score);
+    assert.equal($("#playerplayerkey .player-score").text(), player.score);
   });
 
   it("$html-human", () => {
@@ -71,11 +71,11 @@ describe("browser/BrowserPlayer", () => {
     $tr.append(`<td class="player-name">You</td>`);
     $tr.append("<td class='remaining-tiles'></td>");
     $tr.append(`<td class='connect-state offline'>●</td>`);
-    $tr.append("<td class='score'>20</td>");
+    $tr.append("<td class='player-score'>20</td>");
     $tr.append("<td class='player-clock'></td>");
 
     // passing player will make it this player's turn
-    const $act = player.$tableRow(player);
+    const $act = player.$TR(player);
 
     $div.append($tr);
     $div.append($act);

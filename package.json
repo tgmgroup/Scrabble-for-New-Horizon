@@ -1,16 +1,16 @@
 {
-	"name": "@tgmgroup/Scrabble-for-New-Horizon",
+	"name": "@cdot/xanado",
 	"description": "Multi user crossword game",
-	"version": "3.1.4",
+	"version": "3.2.0",
 	"license": "MIT",
 	"type": "module",
 	"author": {
-		"name": "TGM Group (forked from Crawford Currie's Xanado)",
-		"url": "https://github.com/tgmgroup"
+		"name": "Crawford Currie",
+		"url": "https://github.com/cdot"
 	},
 	"repository": {
 		"type": "git",
-		"url": "git://github.com/tgmgroup/Scrabble-for-New-Horizon"
+		"url": "git://github.com/cdot/Xanado"
 	},
 	"publishConfig": {
 		"registry": "https://registry.npmjs.org/",
@@ -37,19 +37,18 @@
 	],
 	"dependencies": {
 		"@cdot/cbor": "^1.0.5",
-		"@cdot/dictionary": "^1.0.2",
+		"@cdot/dictionary": "^1.0.3",
 		"@rwap/jquery-ui-touch-punch": "^1.0.11",
 		"async-lock": "^1.4.0",
 		"banana-i18n": "^2.3.3",
-		"bcrypt": "^5.1.0",
-		"del": "^7.1.0",
+		"bcrypt": "^6.0.0",
 		"es-module-shims": "^1.6.3",
-		"express": "^4.18.2",
+		"express": "^4.19.2",
 		"express-session": "^1.17.3",
 		"jquery": "^3.6.3",
 		"jquery-ui": "^1.13.2",
 		"jquery.cookie": "^1.4.1",
-		"nodemailer": "^6.9.1",
+		"nodemailer": "^7.0.7",
 		"normalize.css": "^8.0.1",
 		"passport": "^0.6.0",
 		"passport-facebook": "^3.0.0",
@@ -58,10 +57,11 @@
 		"proper-lockfile": "^4.1.2",
 		"session-file-store": "^1.5.0",
 		"socket.io": "^4.5.4",
-		"web-worker": "^1.2.0"
+		"web-worker": "1.2.0"
 	},
 	"devDependencies": {
 		"@fast-csv/format": "^4.3.5",
+		"baseline-browser-mapping": "^2.9.16",
 		"c8": "^7.12.0",
 		"chai": "^4.3.7",
 		"chai-http": "^4.3.0",
@@ -70,25 +70,23 @@
 		"eslint": "^8.33.0",
 		"eslint-plugin-import": "^2.27.5",
 		"html-loader": "^4.2.0",
-		"html-webpack-plugin": "^5.5.3",
 		"jsdoc": "^4.0.0",
-		"jsdom": "^21.1.0",
+		"jsdom": "^28.1.0",
 		"marked": "^4.2.12",
 		"mocha": "^10.2.0",
 		"node-localstorage": "^2.2.1",
 		"tmp-promise": "^3.0.3",
 		"uglify-js": "^3.17.4",
-		"webpack": "^5.88.2",
-		"webpack-cli": "^5.1.4",
-		"webpack-dev-server": "^4.15.1"
+		"webpack": "^5.75.0",
+		"webpack-cli": "^5.0.1"
 	},
 	"scripts": {
-		"build": "webpack --node-env production -c build/wp_sa_games.js; webpack --node-env production -c build/wp_sa_game.js; webpack --node-env production -c build/wp_cl_games.js; webpack --node-env production -c build/wp_cl_game.js",
+		"build": "webpack --node-env production -c build/webpack_config.js",
 		"coverage": "NODE_ENV=test c8 --reporter=html --reporter text npm run test",
-		"debug_build": "node bin/update-indexes.js & webpack -c build/wp_sa_games.js & webpack -c build/wp_sa_game.js & webpack -c build/wp_cl_games.js & webpack -c build/wp_cl_game.js",
+		"debug_build": "webpack -c build/webpack_config.js --stats-modules-space 999",
 		"debug_server": "node bin/server.js --config config.json --html html --debug all",
 		"doc": "jsdoc -c build/jsdoc_config.json src",
-		"docker": "npm run build; docker build . --tag xanado --file build/Dockerfile",
+		"docker": "npm run build && docker build . --tag xanado --file build/Dockerfile",
 		"indexing": "node bin/update-indexes.js",
 		"lint": "eslint src -f unix",
 		"server": "node bin/server.js",

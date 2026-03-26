@@ -32,7 +32,7 @@ describe("game/Board", () => {
         "|N| | | | | |O|M| | | |\n" +
         "| | | | | | | | | | | |\n" +
         "| | | | | | | | | | | |\n" +
-        "| | | | | | | | | | | |");
+              "| | | | | | | | | | | |");
       b.at(6, 6).unplaceTile();
       b.at(6, 6).placeTile(new Tile(
         { letter: "N", isBlank: true }), true);
@@ -65,6 +65,45 @@ describe("game/Board", () => {
                    "|8| | | | | | | | | |8|\n");
       assert.equal(b.squaresUsed(), 23);
       assert(b.hasUnlockedTiles());
+    });
+  });
+
+  it("pack", () => {
+    return Edition.load("Test")
+    .then(edition => {
+      let b = new Board(Game.CLASSES, edition);
+      b.parse(Game.CLASSES, edition,
+        "|Q| | | | | | | | | | |\n" +
+        "|U| | | | | | | | | | |\n" +
+        "|E| | | | | | | | | | |\n" +
+        "|S|C|I|E|N|C|E| | | | |\n" +
+        "|T| | | | | | | | | | |\n" +
+        "|I| | | | | | | | | | |\n" +
+        "|O|P|I|N|I|O|N| | | | |\n" +
+        "|N| | | | | |O|M| | | |\n" +
+        "| | | | | | | | | | | |\n" +
+        "| | | | | | | | | | | |\n" +
+              "| | | | | | | | | | | |");
+      // SMELL: hack
+      b.squares[0][0].tile.isBlank = true;
+      const uri = b.pack();
+      assert.equal(uri, "qUESTION(6)C--P(7)I--I(7)E--N(7)N--I(7)C--O(7)E--NO(10)M(36)");
+
+      b = new Board(Game.CLASSES, edition);
+      b.unpack(uri, edition);
+      assert.equal(b.stringify(),
+                   "|q| | | | | | | | | |8|\n" +
+                   "|U|4| | | | | | | |4| |\n" +
+                   "|E| |7| | | | | |7| | |\n" +
+                   "|S|C|I|E|N|C|E|3| | | |\n" +
+                   "|T| | | |2| |2| | | | |\n" +
+                   "|I| | | | |6| | | | | |\n" +
+                   "|O|P|I|N|I|O|N| | | | |\n" +
+                   "|N| | |3| | |O|M| | | |\n" +
+                   "| | |7| | | | | |7| | |\n" +
+                   "| |4| | | | | | | |4| |\n" +
+                   "|8| | | | | | | | | |8|\n"); 
+      assert(b.squares[0][0].tile.isBlank);
     });
   });
 

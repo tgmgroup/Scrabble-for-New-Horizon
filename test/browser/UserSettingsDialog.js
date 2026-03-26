@@ -20,7 +20,7 @@ describe("browser/UserSettingsDialog", () => {
 
   const user_settings =   {
     "language": "en",
-    "xanadoCSS": "default",
+    "layout": "default",
     "jqTheme": "vader",
     "turn_alert": false,
     "cheers": false,
@@ -33,7 +33,7 @@ describe("browser/UserSettingsDialog", () => {
   it ("dialog", () => {
     const ui = {
       session: { key : "session key" },
-      promiseCSS: () => Promise.resolve(["A", "B"]),
+      promiseLayouts: () => Promise.resolve(["A", "B"]),
       promiseLocales: () => Promise.resolve(["C", "D"]),
       getSetting: s => user_settings[s]
     };

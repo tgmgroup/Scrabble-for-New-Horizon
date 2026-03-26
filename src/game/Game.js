@@ -4,9 +4,8 @@
   and license information. Author Crawford Currie http://c-dot.co.uk*/
 
 /* global assert */
-/* global Platform */
 
-import { genKey, stringify } from "../common/Utils.js";
+import { genKey, stringify, toEnum } from "../common/Utils.js";
 import { CBOR } from "./CBOR.js";
 import { loadDictionary } from "./loadDictionary.js";
 import { Board } from "./Board.js";
@@ -51,30 +50,22 @@ class Game {
    * @typedef {WAITING|PLAYING|GAME_OVER|TWO_PASSES|FAILED_CHALLENGE|TIMED_OUT} Game.State
    */
   static State = {
-    WAITING:          "Waiting for players",
-    PLAYING:          "Playing",
-    FAILED_CHALLENGE: "Challenge failed",
-
-    GAME_OVER:        "Game over",
-    TWO_PASSES:       "All players passed twice",
-    TIMED_OUT:        "Timed out"
+    WAITING:          0,
+    PLAYING:          1,
+    FAILED_CHALLENGE: 2,
+    GAME_OVER:        3,
+    TWO_PASSES:       4,
+    TIMED_OUT:        5
   };
 
-  /**
-   * Commands that can be sent from the UI to the Backend.
-   * @typedef {UNPAUSE|PAUSE|CHALLENGE|PLAY|TAKE_BACK|PASS|GAME_OVER|SWAP} Game.Command
-   */
-  static Command = {
-    CHALLENGE:         "challenge",
-    CONFIRM_GAME_OVER: "confirmGameOver",
-    PASS:              "pass",
-    PAUSE:             "pause",
-    PLAY:              "play",
-    REDO:              "redo",
-    SWAP:              "swap",
-    TAKE_BACK:         "takeBack",
-    UNDO:              "undo",
-    UNPAUSE:           "unpause"
+  // Compatibility; map old strings to new enum
+  static StateCompat = {
+    "Waiting for players": Game.State.WAITING,
+    "Playing": Game.State.PLAYING,
+    "Challenge failed": Game.State.FAILED_CHALLENGE,
+    "Game over": Game.State.GAME_OVER,
+    "All players passed twice": Game.State.TWO_PASSES,
+    "Timed out": Game.State.TIMED_OUT
   };
 
   /**
@@ -121,29 +112,6 @@ class Game {
   };
 
   /**
-   * Different types of {@linkcode Turn}
-   * * PLAY - some tiles were placed on the board
-   * * SWAP - player swapped for fresh tiles from the bag
-   * * GAME_OVER - game is over
-   * * CHALLENGE_LOST - player challenged, and lost
-   * * CHALLENGE_WON - player challenged, and won
-   * * TOOK_BACK - player took back their play
-   * * PASSED - player passed
-   * * TIMED_OUT - player was timed out (if timer type is `TURN`)
-   * @typedef {PLAY|SWAP|GAME_OVER|CHALLENGE_LOST|CHALLENGE_WON|TOOK_BACK|PASSED|TIMED_OUT} Game.Turns
-   */
-  static Turns = {
-    PLAYED:         "play",
-    SWAPPED:        "swap",
-    GAME_ENDED:     "game-over",
-    CHALLENGE_LOST: "challenge-lost",
-    CHALLENGE_WON:  "challenge-won",
-    TOOK_BACK:      "took-back",
-    PASSED:         "passed",
-    TIMED_OUT:      "timed-out"
-  };
-
-  /**
    * Types of game timer
    * * `NONE` - game is untimed
    * * `TURN` - each turn is time-limited
@@ -152,9 +120,23 @@ class Game {
    * @typedef {NONE|TURN|GAME} Game.Timer
    */
   static Timer = {
-    NONE:  undefined,
-    TURN:  /*i18n*/"Turn timer",
-    GAME:  /*i18n*/"Game timer"
+    NONE: 0,
+    TURN: 1,
+    GAME: 2
+  };
+
+  // Timer enum translation keys
+  static TimerI18N = [
+    /*i18n*/"e-none",
+    /*i18n*/"e-tturn",
+    /*i18n*/"e-tgame"
+  ];
+
+  // Compatibility; map old strings to new enum
+  static TimerCompat = {
+    "None": Game.Timer.NONE,
+    "Turn timer": Game.Timer.TURN,
+    "Game timer": Game.Timer.GAME
   };
 
   /**
@@ -166,10 +148,28 @@ class Game {
    * @typedef {NONE|MISS|PER_TURN|PER_WORD} Game.Penalty
    */
   static Penalty = {
-    NONE:     undefined,
-    MISS:     /*i18n*/"Miss next turn",
-    PER_TURN: /*i18n*/"Lose points",
-    PER_WORD: /*i18n*/"Lose points per word"
+    NONE:     0,
+    MISS:     1,
+    PER_TURN: 2,
+    PER_WORD: 3
+  };
+
+  /**
+   * Penalty enum translation keys
+   */
+  static PenaltyI18N = [
+    /*i18n*/"e-none",  // NONE
+    /*i18n*/"e-pmiss", // MISS
+    /*i18n*/"e-plose", // PER_TURN
+    /*i18n*/"e-pppw"   // PER_WORD
+  ];
+
+  // Compatibility; map old strings to new enum
+  static PenaltyCompat = {
+    "None": Game.Penalty.NONE,
+    "Miss next turn": Game.Penalty.MISS,
+    "Lose points": Game.Penalty.PER_TURN,
+    "Lose points per word": Game.Penalty.PER_WORD
   };
 
   /**
@@ -182,28 +182,45 @@ class Game {
    * @typedef {NONE|AFTER|REJECT} Game.WordCheck
    */
   static WordCheck = {
-    NONE:    undefined,
-    AFTER:   /*i18n*/"Check words after play",
-    REJECT:  /*i18n*/"Reject unknown words"
+    NONE:   0,
+    AFTER:  1,
+    REJECT: 2
   };
 
   /**
-   * Defaults. CAREFUL! These defaults are not automatically applied
-   * in the constructor; if a field isn't set in the object passed to
-   * the constructor, the default will not be automatically applied
-   * (except for edition, which is always required). So if you want
-   * to change any of the defaults, you need to make sure the
+   * WordCheck enum translation keys
+   */
+  static WordCheckI18N = [
+    /*i18n*/"e-none", // NONE
+    /*i18n*/"e-caft", // AFTER
+    /*i18n*/"e-crej", // REJECT
+  ];
+
+  // Compatibility; map old strings to new enum
+  static WordCheckCompat = {
+    "None": Game.WordCheck.NONE,
+    "Don't check words": Game.WordCheck.NONE,
+    "Check words after play": Game.WordCheck.AFTER,
+    "Reject unknown words": Game.WordCheck.REJECT
+  };
+
+  /**
+   * Defaults. CAREFUL! Not all of these defaults are automatically
+   * applied in the constructor; if a field isn't set in the object
+   * passed to the constructor, the default may not be automatically
+   * applied (except for edition, which is always required). So if you
+   * want to change any of the defaults, you need to make sure the
    * constructor code will pick the new value up.
    */
   static DEFAULTS = {
 	  edition:         "English_Scrabble",
-	  dictionary:      "CSW2019_English",
+	  dictionary:      "CSW2021_English",
 
     timerType:        Game.Timer.NONE,
 		timeAllowed:      25, // minutes per game
 		timePenalty:      0,
 
-    challengePenalty: Game.Penalty.NONE,
+    challengePenalty: Game.Penalty.MISS,
 		penaltyPoints:    5,
 
     wordCheck:        Game.WordCheck.NONE,
@@ -365,15 +382,16 @@ class Game {
        */
       this.dictionary = params.dictionary;
 
-    if (params.timerType && !/^none$/i.test(params.timerType)) {
+    if (params.timerType) {
       /**
        * Type of timer for this game.
        * @member {Timer?}
        */
       this.timerType = params.timerType;
-    }
+    } else
+      this.timerType = Game.DEFAULTS.timerType;
 
-    if (this.timerType) {
+    if (this.timerType !== Game.Timer.NONE) {
       if (typeof params.timeAllowed !== "undefined") {
         /**
          * Time limit for this game, in minutes. If `timerType` is
@@ -391,7 +409,7 @@ class Game {
       if (this.timerType === Game.Timer.GAME) {
         /**
          * Time penalty for this game, points lost per minute over
-         * timeAllowed. Only used if `timerType` is `TIMER_GAME`.
+         * timeAllowed. Only used if `timerType` is `GAME`.
          * @member {number?}
          */
         this.timePenalty = params.timePenalty || Game.DEFAULTS.timePenalty;
@@ -402,8 +420,10 @@ class Game {
      * The type of penalty to apply for a failed challenge.
      * @member {Penalty}
      */
-    if (params.challengePenalty && params.challengePenalty !== "none")
+    if (params.challengePenalty)
       this.challengePenalty = params.challengePenalty;
+    else
+      this.challengePenalty = Game.DEFAULTS.challengePenalty;
 
     if (this.challengePenalty === Game.Penalty.PER_TURN
         || this.challengePenalty === Game.Penalty.PER_WORD) {
@@ -415,13 +435,14 @@ class Game {
       this.penaltyPoints = params.penaltyPoints || Game.DEFAULTS.penaltyPoints;
     }
 
-    if (params.wordCheck && params.wordCheck !== "none") {
+    if (params.wordCheck) {
       /**
        * Whether or not to check plays against the dictionary.
        * @member {WordCheck?}
        */
       this.wordCheck = params.wordCheck;
-    }
+    } else
+      this.wordCheck = Game.DEFAULTS.wordCheck;
 
     if (params.minPlayers > 2) {
       /**
@@ -544,18 +565,18 @@ class Game {
   /**
    * Add a player to the game.
    * @param {Player} player
-   * @param {boolean?} fillRack true to fill the player's rack
-   * from the game's letter bag.
+   * @param {boolean} fillRack true to fill the player's rack
+   * from the game's letter bag. Default false.
    * @return {Game} this
    */
-  addPlayer(player, fillRack) {
+  addPlayer(player, fillRack = false) {
     assert(this.letterBag, "Cannot addPlayer() before create()");
     assert(
       !this.maxPlayers || this.players.length < this.maxPlayers,
       "Cannot addPlayer() to a full game");
     player._debug = this._debug;
     this.players.push(player);
-    if (this.timerType)
+    if (this.timerType !== Game.Timer.NONE)
       player.clock = this.timeAllowed * 60;
     if (fillRack)
       player.fillRack(this.letterBag, this.rackSize);
@@ -675,13 +696,24 @@ class Game {
   }
 
   /**
-   * Get the current winning player
-   * @return {Player} player in the lead
+   * Determine if the player is a winning player
+   * @param {Player} player the player to check
+   * @return {boolean} true if the player is currently winning (they
+   * may be one of several with the same score!)
    */
-  getWinner() {
-    return this.players.reduce(
-      (best, player) => (player.score > best.score ? player : best),
-      this.players[0]);
+  isWinner(player) {
+    const topScore = this.winningScore();
+    return player.score === topScore;
+  }
+
+  /**
+   * Get a list of the winning players in this game. These are the
+   * players who currently share the high score.
+   * @return {Player[]} list of winning players
+   */
+  getWinners() {
+    const topScore = this.winningScore();
+    return this.players.filter(p => p.score === topScore);
   }
 
   /**
@@ -783,12 +815,12 @@ class Game {
     const options = [ `edition:${this.edition}` ];
     if (this.dictionary)
       options.push(`dictionary:${this.dictionary}`);
-    if (this.timerType) {
+    if (this.timerType !== Game.Timer.NONE) {
       options.push(`${this.timerType}:${this.timeAllowed}`);
       if (this.timerType === Game.Timer.GAME)
         options.push(`timePenalty:${this.timePenalty}`);
     }
-    if (this.challengePenalty) {
+    if (this.challengePenalty !== Game.Penalty.NONE) {
       options.push(this.challengePenalty);
       if (this.challengePenalty === Game.Penalty.PER_TURN
           || this.challengePenalty === Game.Penalty.PER_WORD)
@@ -798,7 +830,7 @@ class Game {
       options.push(`next:${this.whosTurnKey}`);
 
     if (this.wordCheck) options.push(this.wordCheck);
-    if (this.challengePenalty) options.push(this.challengePenalty);
+    if (this.challengePenalty !== Game.Penalty.NONE) options.push(this.challengePenalty);
     if (this.predictScore) options.push("Predict");
     if (this.allowTakeBack) options.push("Allow takeback");
     if (this.minPlayers)
@@ -829,16 +861,16 @@ class Game {
    * for sending to the 'games' interface.  The structure does not
    * suffice to fully reconstruct the game; there will be no `board`,
    * `rackSize`, `swapSize`, `bonuses`, `turns` will be a list of
-   * {@linkcode Turn#serialisable|Turn.serialisable}, and `players`
-   * will be a list of {@linkcode Player#serialisable|Player.serialisable}.
-   * @param {UserManager} um user manager object for getting emails; only
+   * {@linkcode Turn#sendable|Turn.sendable}, and `players`
+   * will be a list of {@linkcode Player#sendable|Player.sendable}.
+   * @param {UserManager?} um user manager object for getting emails; only
    * works on server side
    * @return {Promise} resolving to a simple object with
    * key game data
    */
-  serialisable(um) {
+  sendable(um) {
     return Promise.all(
-      this.players.map(player => player.serialisable(this, um)))
+      this.players.map(player => player.sendable(this, um)))
     .then(ps => {
       const simple = {
         key: this.key,
@@ -847,7 +879,7 @@ class Game {
         dictionary: this.dictionary,
         state: this.state,
         allowUndo: this.allowUndo,
-        // players is a list of Player.serialisable
+        // players is a list of Player.sendable
         players: ps,
         whosTurnKey: this.whosTurnKey,
         timerType: this.timerType,
@@ -857,13 +889,13 @@ class Game {
         // this.rackSize not sent
         // this.swapSize not sent
         // this.bonuses not sent
-        // turns is a list of Turn.serialisable
-        turns: this.turns.map(t => t.serialisable())
+        // turns is a list of Turn.sendable
+        turns: this.turns.map(t => t.sendable())
       };
       if (this.minPlayers) simple.minPlayers = this.minPlayers;
       if (this.maxPlayers) simple.maxPlayers = this.maxPlayers;
-      if (this.wordCheck) simple.wordCheck = this.wordCheck;
-      if (this.timerType != Game.TIMER_NONE) {
+      simple.wordCheck = this.wordCheck;
+      if (this.timerType != Game.Timer.NONE) {
         simple.timeAllowed = this.timeAllowed;
         simple.timePenalty = this.timePenalty;
       }
@@ -880,6 +912,109 @@ class Game {
   }
 
   /**
+   * Encode the game in a URI parameter block
+   * @return {object} parameter object
+   */
+  pack() {
+    const packed = {};
+
+    packed.a = this.lastActivity();
+    packed.b = this.board.pack();
+    const cp = this.challengePenalty;
+    if (cp >= 0) {
+      packed.c = cp;
+      if (this.penaltyPoints > 0) packed.o = this.penaltyPoints;
+    }
+    packed.d = this.dictionary;
+    packed.e = this.edition;
+    if (this.allowTakeBack) packed.g = true;
+    if (this.predictScore) packed.i = true;
+    packed.k = this.key;
+    packed.m = this.creationTimestamp;
+    if (this.nextGameKey) packed.n = this.nextGameKey;
+    this.players.forEach((player, index) => {
+      packed[`P${index}`] = player.pack();
+    });
+    this.turns.forEach((turn, index) => {
+      packed[`T${index}`] = turn.pack();
+    });
+    packed.s = this.state;
+    packed.t = this.timerType;
+    if (this.allowUndo) packed.u = true;
+    packed.v = this.wordCheck;
+    if (this.whosTurnKey) packed.w = this.whosTurnKey;
+    if (this.timerType != Game.Timer.NONE) {
+      packed.x = this.timeAllowed;
+      packed.y = this.timePenalty;
+    }
+
+    return packed;
+  }
+
+  /**
+   * Promise to construct a game from URI parameters.
+   * @param {Object} packed URI parameters
+   * @return {Promise} a promise that resolves to a new game
+   */
+  static unpack(packed) {
+    let game;
+    return new this({ edition: packed.e })
+    .create()
+    .then(g => game = g)
+    .then(() => game.promiseEdition())
+    .then(edition => {
+      game.board.unpack(packed.b, edition);
+      game.board.forEachTiledSquare(sq => {
+        game.letterBag.removeTile(sq.tile);
+        return false;
+      });
+      if (packed.c) {
+        game.challengePenalty = packed.c;
+        game.penaltyPoints = packed.o;
+      }
+      game.dictionary = packed.d;
+      game.edition = packed.e;
+      game.state = packed.s;
+      if (packed.g) game.allowTakeBack = true;
+      if (packed.i) game.predictScore = true;
+      game.key = packed.k;
+      game.creationTimestamp = Number(packed.m);
+      if (packed.t) {
+        game.timerType = packed.t;
+        game.timeAllowed = Number(packed.x);
+        game.timePenalty = Number(packed.y);
+      }
+      if (packed.u) game.allowUndo = true;
+      if (packed.v) game.wordCheck = packed.v;
+      if (packed.w) game.whosTurnKey = packed.w;
+      if (packed.n) game.nextGameKey = packed.n;
+
+      game.players = [];
+      let index = 0;
+      while (packed[`P${index}`]) {
+        const p = new this.CLASSES.Player({}, this.CLASSES);
+        p.unpack(packed[`P${index}`], edition);
+        game.addPlayer(p, false);
+        p.rack.forEachTiledSquare(sq => {
+          game.letterBag.removeTile(sq.tile);
+          return false;
+        });
+        index++;
+      }
+
+      index = 0;
+      game.turns = [];
+      while (packed[`T${index}`]) {
+        const t = new this.CLASSES.Turn();
+        t.unpack(packed[`T${index}`], edition);
+        game.turns.push(t);
+        index++;
+      }
+      return game;
+    });
+  }
+
+  /**
    * Promise to finish the construction or load from serialisation
    * of a game.
    * A game has to know what DB so it knows where to save. The
@@ -891,7 +1026,13 @@ class Game {
   onLoad(db) {
     // if this onLoad follows a load from serialisation, which
     // does not invoke the constructor.
-    // We always set the _db
+
+    // Compatibility: Remap enums from text strings to numbers. Previously
+    // we stored the whole string, now just a number.
+    this.state = toEnum(this.state, Game.StateCompat);
+    this.timerType = toEnum(this.timerType, Game.TimerCompat);
+    this.challengePenalty = toEnum(this.challengePenalty, Game.PenaltyCompat);
+    this.wordCheck = toEnum(this.wordCheck, Game.WordCheckCompat);
 
     /**
      * Database containing this game. Only available server-side,
@@ -915,24 +1056,28 @@ class Game {
     this.players.forEach(p => p._debug = this._debug);
     if (!this.turns)
       this.turns = [];
+    else
+      this.turns.forEach(t => {
+        t.type = toEnum(t.type, Turn.TypeCompat);
+      });
 
     return Promise.resolve(this);
   }
 
   /**
-   * Load a game from a structure generated by serialisable. This
+   * Load a game from a structure generated by sendable. This
    * method is designed to use to support rapid loading of games
    * into the `games` browser interface. The game will be incomplete,
-   * only the fields supported by serialisable will be populated.
+   * only the fields supported by sendable will be populated.
    * @param {object} factory Game class to be used as factory
-   * @param {object} simple object generated by serialisable()
+   * @param {object} simple object generated by sendable()
    */
-  static fromSerialisable(simple, factory) {
+  static fromSendable(simple, factory) {
     const game = new factory.Game(simple);
     game.state = simple.state;
     game.players = simple.players.map(
-      p => factory.Player.fromSerialisable(p, factory));
-    game.turns = simple.turns.map(t => Turn.fromSerialisable(t, factory));
+      p => factory.Player.fromSendable(p, factory));
+    game.turns = simple.turns.map(t => Turn.fromSendable(t, factory));
     return game;
   }
 
@@ -1089,7 +1234,6 @@ class Game {
    */
   finishTurn(player, turn) {
     turn = new Turn(turn);
-    turn.gameKey = this.key;
     turn.playerKey = player.key;
 
     // store turn (server side)
@@ -1124,7 +1268,7 @@ class Game {
    */
   startTheClock() {
     if (typeof this._intervalTimer === "undefined"
-        && this.timerType
+        && this.timerType !== Game.Timer.NONE
         && this.state === Game.State.PLAYING
         && !this.pausedBy) {
 
@@ -1179,8 +1323,7 @@ class Game {
       {
         gameKey: this.key,
         playerKey: player.key,
-        clock: player.clock,
-        timestamp: Date.now()
+        clock: player.clock
       });
   }
 
@@ -1191,7 +1334,8 @@ class Game {
    * `Game.Timer.TURN`. Turn timeout for this turn. Set if
    * this is a restart of an unfinished turn, defaults to
    * this.timeAllowed if undefined.
-   * @return {Promise} a promise that resolves to undefined
+   * @return {Promise} a promise that resolves to the game. Note
+   * that waiting on this promise will stall the UI.
    * @private
    */
   startTurn(player, timeout) {
@@ -1216,12 +1360,12 @@ class Game {
     // For a timed game, make sure the clock is running and
     // start the player's timer.
 
-    if (this.timerType) {
+    if (this.timerType !== Game.Timer.NONE) {
       /* c8 ignore next 2 */
       if (this._debug)
         this._debug("\ttimed game,", player.name,
                     "has", (timeout || this.timeAllowed),
-                    "left to play",this.timerType);
+                    "left to play", this.timerType);
       this.startTheClock(); // does nothing if already started
     }
     else {
@@ -1235,7 +1379,7 @@ class Game {
       // Make the player pass when their clock reaches 0
       player.setTimeout(
         timeout || this.timeAllowed * 60,
-        () => this.pass(player, Game.Turns.TIMED_OUT));
+        () => this.pass(player, Turn.Type.TIMED_OUT));
 
     return Promise.resolve(this);
   }
@@ -1264,7 +1408,7 @@ class Game {
     // challenge is a Promise that will resolve to true if a
     // challenge is made, or false otherwise.
     let lastPlay = this.lastTurn();
-    if (lastPlay && lastPlay.type === Game.Turns.PLAYED
+    if (lastPlay && lastPlay.type === Turn.Type.PLAYED
         && this.dictionary
         && player.canChallenge) {
       const lastPlayer = this.getPlayerWithKey(lastPlay.playerKey);
@@ -1285,7 +1429,7 @@ class Game {
             /* c8 ignore next 2 */
             if (this._debug)
               this._debug("Bad words:", bad);
-            return this.takeBack(player, Game.Turns.CHALLENGE_WON)
+            return this.takeBack(player, Turn.Type.CHALLENGE_WON)
             .then(() => true);
           }
           return false; // no challenge made
@@ -1308,16 +1452,10 @@ class Game {
       return this.findBestPlay(
         player.rack.tiles(),
         data => {
-          if (typeof data === "string") {
-            /* c8 ignore next 2 */
-            if (this._debug)
-              this._debug(data);
-          } else {
-            bestPlay = data;
-            /* c8 ignore next 2 */
-            if (this._debug)
-              this._debug("Best", bestPlay.stringify());
-          }
+          bestPlay = data;
+          /* c8 ignore next 2 */
+          if (this._debug)
+            this._debug("Best", bestPlay.stringify());
         }, player.dictionary || this.dictionary)
       .then(() => {
         if (bestPlay)
@@ -1326,7 +1464,7 @@ class Game {
         /* c8 ignore next 2 */
         if (this._debug)
           this._debug(player.name, "can't play, passing");
-        return this.pass(player, Game.Turns.PASSED);
+        return this.pass(player, Turn.Type.PASSED);
       });
     });
   }
@@ -1367,6 +1505,7 @@ class Game {
     if (this._debug)
       this._debug("b>f", player.key, message,
                 stringify(data));
+    data._timestamp = Date.now();
     // Player may be connected several times, or not at all
     this._channels.forEach(
       channel => {
@@ -1388,6 +1527,7 @@ class Game {
       /* c8 ignore next 2 */
       if (this._debug)
         this._debug("b>f *", message, stringify(data));
+    data._timestamp = Date.now();
     this._channels.forEach(channel => channel.emit(message, data));
   }
 
@@ -1402,6 +1542,7 @@ class Game {
     /* c8 ignore next 2 */
     if (this._debug)
       this._debug("b>f !", player.key, message, stringify(data));
+    data._timestamp = Date.now();
     this._channels.forEach(
       channel => {
         // Player may be connected several times, so check key and not object
@@ -1437,12 +1578,12 @@ class Game {
   sendCONNECTIONS() {
     Promise.all(
       this.players
-      .map(player => player.serialisable(this)
-           .then(cat => {
-             cat.gameKey = this.key;
-             if (cat.key === this.whosTurnKey)
-               cat.isNextToGo = true;
-             return cat;
+      .map(player => player.sendable(this)
+           .then(playerInfo => {
+             playerInfo.gameKey = this.key;
+             if (playerInfo.key === this.whosTurnKey)
+               playerInfo.isNextToGo = true;
+             return playerInfo;
            })))
     .then(res => {
       // Add observers who are not active players. These track
@@ -1551,9 +1692,7 @@ class Game {
    * so it can be invoked either directly or asynchronously.
    * @param {Game} game the Game
    * @param {Tile[]} rack rack in the form of a simple list of Tile
-   * @param {Platform~bestMoveCallback} cb accepts a best play
-   * whenever a new one is found, or a string containing a
-   * message
+   * @param {function} cb passed a best play whenever a new one is found.
    * @param {string?} dictionary name of (or path to) dictionary to
    * override the game dictionary
    * @return {Promise} Promise that resolves when all best moves
@@ -1561,7 +1700,7 @@ class Game {
    * @abstract
    */
   findBestPlay(rack, cb, dictionary) {
-    return (Platform.USE_WORKERS
+    return (Game.USE_WORKERS
             ? import(
               /* webpackMode: "lazy" */
               /* webpackChunkName: "findBestPlayController" */

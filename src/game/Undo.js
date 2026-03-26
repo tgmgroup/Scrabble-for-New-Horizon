@@ -5,6 +5,7 @@
 /* global assert */
 import { stringify } from "../common/Utils.js";
 import { Game } from "./Game.js";
+import { Turn } from "./Turn.js";
 const Tile = Game.CLASSES.Tile;
 
   /**
@@ -55,11 +56,14 @@ const Undo = superclass => class extends superclass {
    * @param {Turn} turn the Turn to unplay
    */
   unconfirmGameOver(turn) {
-    // Re-adjust scores from the deltas
-    for (const delta of turn.score) {
-      const player = this.getPlayerWithKey(delta.key);
-      assert(player, delta.key);
-      player.score -= (delta.time || 0) + (delta.tiles || 0);
+    // Compatibility with old code
+    if (!turn.endStates && typeof turn.score === "object")
+      turn.endStates = turn.score;
+    // Re-adjust scores from the player end states
+    for (let pi = 0; pi < turn.endStates.length; pi++) {
+      const endState = turn.endStates[pi];
+      const player = this.players[pi];
+      player.score -= (endState.time || 0) + (endState.tiles || 0);
     }
     this.state = Game.State.PLAYING;
     // TODO: Notify
@@ -135,24 +139,24 @@ const Undo = superclass => class extends superclass {
     if (this._debug)
       this._debug("un-", turn.type);
     switch (turn.type) {
-    case Game.Turns.SWAPPED:
+    case Turn.Type.SWAPPED:
       this.unswap(turn, quiet);
       break;
-    case Game.Turns.PASSED:
-    case Game.Turns.TIMED_OUT:
+    case Turn.Type.PASSED:
+    case Turn.Type.TIMED_OUT:
       this.unpass(turn, quiet);
       break;
-    case Game.Turns.PLAYED:
+    case Turn.Type.PLAYED:
       this.unplay(turn, quiet);
       break;
-    case Game.Turns.TOOK_BACK:
-    case Game.Turns.CHALLENGE_WON:
+    case Turn.Type.TOOK_BACK:
+    case Turn.Type.CHALLENGE_WON:
       this.untakeBack(turn, quiet);
       break;
-    case Game.Turns.GAME_ENDED:
+    case Turn.Type.GAME_ENDED:
       this.unconfirmGameOver(turn, quiet);
       break;
-    case Game.Turns.CHALLENGE_LOST:
+    case Turn.Type.CHALLENGE_LOST:
       this.unchallenge(turn, quiet);
       break;
     default:
@@ -179,7 +183,7 @@ const Undo = superclass => class extends superclass {
     if (this._debug)
       this._debug("REDO", turn.type, turn);
     switch (turn.type) {
-    case Game.Turns.SWAPPED:
+    case Turn.Type.SWAPPED:
       // Remove and return the expected tiles to the the unshaken bag
       // to ensure replay order. We have to do this so the next play on the
       // undo stack is also redoable.
@@ -191,7 +195,7 @@ const Undo = superclass => class extends superclass {
         this._debug("\t-- swap");
       return this.swap(player, turn.placements)
       .then(() => delete this.letterBag.predictable);
-    case Game.Turns.PLAYED:
+    case Turn.Type.PLAYED:
       this.letterBag.predictable = true;
       // Remove and return
       this.letterBag.removeTiles(turn.replacements);
@@ -201,25 +205,25 @@ const Undo = superclass => class extends superclass {
         this._debug("\t-- play");
       return this.play(player, turn)
       .then(() => delete this.letterBag.predictable);
-    case Game.Turns.PASSED:
-    case Game.Turns.TIMED_OUT:
+    case Turn.Type.PASSED:
+    case Turn.Type.TIMED_OUT:
       /* c8 ignore next 2 */
       if (this._debug)
         this._debug("\t-- pass");
       return this.pass(player, turn.type);
-    case Game.Turns.TOOK_BACK:
+    case Turn.Type.TOOK_BACK:
       /* c8 ignore next 2 */
       if (this._debug)
         this._debug("\t-- takeBack");
       return this.takeBack(player, turn.type);
-    case Game.Turns.CHALLENGE_WON:
-    case Game.Turns.CHALLENGE_LOST:
+    case Turn.Type.CHALLENGE_WON:
+    case Turn.Type.CHALLENGE_LOST:
       /* c8 ignore next 2 */
       if (this._debug)
         this._debug("\t-- challenge");
       return this.challenge(
         this.getPlayerWithKey(turn.challengerKey), player);
-    case Game.Turns.GAME_ENDED:
+    case Turn.Type.GAME_ENDED:
       /* c8 ignore next 2 */
       if (this._debug)
         this._debug("\t-- confirmGameOver");

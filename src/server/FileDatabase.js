@@ -20,7 +20,7 @@ class FileDatabase /* extends Database */ {
   /**
    * @param {object} options implementation-specific options
    * @param {string} options.dir name of a pre-existing
-   * directory to store games in, relative to ServerPlatform.getFilePath
+   * directory to store games in, relative to ServerPlatform.absolutePath
    * @param {string} options.ext will be used as the extension on file names
    * (without the leading .)
    */
@@ -28,7 +28,6 @@ class FileDatabase /* extends Database */ {
     this.directory = options.dir;
     this.ext = options.ext || ".db";
     this.re = new RegExp(`\\.${this.ext}$`);
-    this.locks = {};
   }
 
   /** See {@linkcode Database#keys|Database.keys} for documentation */

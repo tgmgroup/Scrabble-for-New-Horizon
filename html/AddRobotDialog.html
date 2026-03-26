@@ -1,25 +1,42 @@
 <!--Copyright (C) 2019-2022 The Xanado Project https://github.com/cdot/Xanado
 License MIT. See README.md at the root of this distribution for full copyright
 and license information. Author Crawford Currie http://c-dot.co.uk-->
-<div class="dialog-row" data-i18n-tooltip="tt-robot-dic">
-  <label for="dictionary" data-i18n="Robot dictionary"></label>
-  <select id="dictionary" name="dictionary">
-    <option value="New-Horizon" data-i18n="New-Horizon"></option>
-  </select>
+<div class="dialog-row">
+	<label
+		for="dictionary"
+		data-i18n-tooltip="tt-robot-dic"
+		data-i18n="lbl-robdic"
+	></label>
+	<select id="dictionary" name="dictionary">
+		<option value="New-Horizon" data-i18n="New-Horizon"></option>
+	</select>
 </div>
 
-<div class="dialog-row" data-i18n-tooltip="tt-can-chall">
-  <label for="canChallenge" data-i18n="Can challenge"></label>
-  <input type="checkbox" id="canChallenge" name="canChallenge"/>
+<div class="dialog-row">
+	<label
+		for="canChallenge"
+		data-i18n-tooltip="tt-can-chall"
+		data-i18n="lbl-canchall"
+	></label>
+	<input type="checkbox" id="canChallenge" name="canChallenge" />
 </div>
 
-<div class="dialog-row" data-i18n-tooltip="tt-robot-wait">
-  <label for="delayBeforePlay" data-i18n="Delay"></label>
-  <input type="number" id="delayBeforePlay" name="delayBeforePlay" min="1" data-i18n-placeholder="seconds"/>
+<div class="dialog-row">
+	<label
+		for="delayBeforePlay"
+		data-i18n-tooltip="tt-robot-wait"
+		data-i18n="lbl-delay"
+	></label>
+	<input
+		type="number"
+		id="delayBeforePlay"
+		name="delayBeforePlay"
+		min="0"
+		data-i18n-placeholder="ph-seconds"
+	/>
 </div>
 
 <div class="dialog_row">
-  <!--autofocus to stop the dictionary tooltip from popping up-->
-  <button class="submit" data-i18n="Add robot" autofocus></button>
+	<!--autofocus to stop the dictionary tooltip from popping up-->
+	<button class="submit" data-i18n="btn-add-robot" autofocus></button>
 </div>
-

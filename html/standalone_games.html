@@ -1,84 +1,123 @@
-<!DOCTYPE html>
+<!doctype html>
 <!--Copyright (C) 2019-2022 The Xanado Project https://github.com/cdot/Xanado
 License MIT. See README.md at the root of this distribution for full copyright
 and license information. Author Crawford Currie http://c-dot.co.uk-->
 <html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <meta charset="utf-8" />
-    <!-- base href=".." This breaks $.tabs(), hard, so don't do it /-->
-    <link rel="icon" href="../images/favicon.ico" type="image/x-icon" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta charset="utf-8" />
+		<!-- base href=".." This breaks $.tabs(), hard, so don't do it /-->
+		<link rel="icon" href="../images/xanado_favicon.png" type="image/x-icon" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0, user-scalable=yes"
+		/>
 
-    <title>Create/Join Scrabble Game</title>
+		<title>Create/Join Scrabble Game</title>
 
-    <link href="../node_modules/normalize.css/normalize.css" rel="stylesheet" type="text/css">
+		<link
+			href="../node_modules/normalize.css/normalize.css"
+			rel="stylesheet"
+			type="text/css"
+		/>
 
-    <script async src="../node_modules/es-module-shims/dist/es-module-shims.js"></script>
-    <script type="importmap">
-      {
-        "imports": {
-          "jquery": "../node_modules/jquery/dist/jquery.js",
-          "jquery-ui": "../node_modules/jquery-ui/dist/jquery-ui.js",
-          "@cdot/cbor": "../node_modules/@cdot/cbor/dist/mjs/index.js",
-          "@cdot/dictionary": "../node_modules/@cdot/dictionary/dist/mjs/index.js",
-          "banana-i18n": "../node_modules/banana-i18n/dist/banana-i18n.js"
-        }
-      }
-    </script>
-    
-    <!-- Rewritten to reflect the preferences -->
-    <link id="jQueryTheme" href="../node_modules/jquery-ui/dist/themes/pepper-grinder/jquery-ui.min.css" rel="stylesheet" type="text/css">
+		<script
+			async
+			src="../node_modules/es-module-shims/dist/es-module-shims.js"
+		></script>
+		<script type="importmap">
+			{
+				"imports": {
+					"jquery": "../node_modules/jquery/dist/jquery.js",
+					"jquery-ui": "../node_modules/jquery-ui/dist/jquery-ui.js",
+					"@cdot/cbor": "../node_modules/@cdot/cbor/dist/mjs/index.js",
+					"@cdot/dictionary": "../node_modules/@cdot/dictionary/dist/mjs/index.js",
+					"banana-i18n": "../node_modules/banana-i18n/dist/banana-i18n.js"
+				}
+			}
+		</script>
 
-    <link href="../css/default.css" rel="stylesheet" type="text/css">
+		<!-- Rewritten to reflect the preferences -->
+		<link
+			id="jQueryTheme"
+			href="../node_modules/jquery-ui/dist/themes/pepper-grinder/jquery-ui.min.css"
+			rel="stylesheet"
+			type="text/css"
+		/>
 
-    <!-- Rewritten in browser/UI.js to reflect the preferences -->
-    <link id="xanadoCSS" href="../css/default.css" rel="stylesheet" type="text/css">
+		<link href="../css/default.css" rel="stylesheet" type="text/css" />
 
-    <script type="javascript" src="../node_modules/@rwap/jquery-ui-touch-punch/jquery.ui.touch-punch.js"></script>
-    <script type="module" src="../src/standalone/_StandaloneGamesUI.js"></script>
-  </head>
-  <body class="games-ui">
-    <div class="loading">
-      <img src="../images/loading.gif" />
-    </div>
-    <div class="waiting ui-widget">
-      <div id="personaliseButton" style="float:right" data-i18n-tooltip="tt-personalise">&#9881;</div>
-      <div id="gamesCumulative">
-        <h2 data-i18n="Leader Board"></h2>
-        <div id="playerList">
-        </div>
-      </div>
+		<!-- Rewritten in browser/UI.js to reflect the preferences -->
+		<link
+			id="xanadoCSS"
+			href="../css/default.css"
+			rel="stylesheet"
+			type="text/css"
+		/>
 
-      <div id="gamesCumulative">
-        <h2 data-i18n="Leader Board"></h2>
-        <div id="playerList">
-        </div>
-      </div>
+		<script
+			type="javascript"
+			src="../node_modules/@rwap/jquery-ui-touch-punch/jquery.ui.touch-punch.js"
+		></script>
+		<script
+			type="module"
+			src="../src/standalone/_StandaloneGamesUI.js"
+		></script>
+	</head>
+	<body class="games-ui">
+		<div class="loading">
+			<img src="../images/loading.gif" />
+		</div>
+		<div class="waiting ui-widget">
+			<img src="../images/logo.svg" class="xanado-logo" />
+			<button
+				id="personalise-button"
+				style="float: right"
+				data-i18n-tooltip="tt-personalise"
+			></button>
+			<div id="gamesCumulative">
+				<h2 data-i18n="h-leader-board"></h2>
+				<div id="playerList"></div>
+			</div>
 
-      <div id="gamesKnown">
-        <h2 data-i18n="Games"></h2>
-        <label for="showAllGames" data-i18n="Show finished games"></label>
-        <input type="checkbox" id="showAllGames" />
-        <table id="gamesList">
-          <thead>
-            <tr>
-              <th data-i18n="ID"></th>
-              <th data-i18n="Edition"></th>
-              <th data-i18n="Last play"></th>
-              <th data-i18n="State"></th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+			<div id="gamesCumulative">
+				<h2 data-i18n="h-leader-board"></h2>
+				<div id="playerList"></div>
+			</div>
 
-      <div class="dialog-row">
-        <button id="create-game" data-i18n="label-create-game"></button>
-      </div>
-    </div>
+			<div id="gamesKnown">
+				<h2 data-i18n="Games"></h2>
+				<label for="showAllGames" data-i18n="lbl-showall"></label>
+				<input type="checkbox" id="showAllGames" />
+				<table id="gamesList">
+					<thead>
+						<tr>
+							<th data-i18n="th-key"></th>
+							<th data-i18n="th-edition"></th>
+							<th data-i18n="th-lastplay"></th>
+							<th data-i18n="th-state"></th>
+						</tr>
+					</thead>
+					<tbody></tbody>
+				</table>
+			</div>
 
-    <div id="alertDialog" class="dialog">
-    </div>
-  </body>
+			<div class="dialog-row">
+				<button id="create-game" data-i18n="btn-create-new-game"></button>
+			</div>
+		</div>
+
+		<div id="alertDialog" class="dialog"></div>
+
+		<div id="enjoyDialog" class="dialog">
+			<div class="dialog-row" data-i18n="txt-enjoy"></div>
+			<div class="dialog-row">
+				<button
+					name="join"
+					data-i18n="btn-join"
+					data-i18n-tooltip="tt-join"
+				></button>
+			</div>
+		</div>
+	</body>
 </html>

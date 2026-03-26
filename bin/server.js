@@ -32,20 +32,20 @@ import { Game } from "../src/game/Game.js";
 
 // Default configuration.
 const DEFAULT_CONFIG = {
-  port: 9093,
-  host: "localhost",
+  port: 9093, // random pick
+  host: "0.0.0.0", // all interfaces, required for docker to work
   games: path.join(__dirname, "..", "games"),
-  maxAge: 14 * 24 * 60 * 60 * 1000,
+  maxAge: 14 * 24 * 60 * 60 * 1000, // 2 weeks
   game_defaults: Game.DEFAULTS,
   // Defaults passed to the UI without processing by the server
   user_defaults: {
-    notification: false,
-    theme: "default",
+    notification: false, // notification requires https
+    layout: "default",
     jqTheme: "pepper-grinder",
     warnings: true,
     cheers: true,
     tile_click: true,
-    one_window: false,
+    one_window: false, // don't open games in the same tab
     turn_alert: true
   }
 };

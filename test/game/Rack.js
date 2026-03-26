@@ -3,8 +3,10 @@
 /* eslint-env mocha */
 
 import { assert } from "chai";
+import { setupPlatform } from "../TestPlatform.js";
 
 import { Game } from "../../src/game/Game.js";
+import { Edition } from "../../src/game/Edition.js";
 const Rack = Game.CLASSES.Rack;
 const Tile = Game.CLASSES.Tile;
 
@@ -12,6 +14,8 @@ const Tile = Game.CLASSES.Tile;
  * Unit tests for Rack
  */
 describe("game/Rack", () => {
+
+  before(setupPlatform);
 
   it("basics", () => {
     let r = new Rack(Game.CLASSES, {id: "base", size: 10});
@@ -76,6 +80,30 @@ describe("game/Rack", () => {
     const b2 = r.removeTile(t2);
     assert.deepEqual(b2, t2);
     assert.equal(r.lettersLeft().length, 0);
- });
+  });
+
+  it("pack", () => {
+    return Edition.load("Test")
+    .then(edition => {
+      let r = new Rack(Game.CLASSES, { id: "base", size: 8 });
+      const t = new Tile({letter: " ", isBlank: true});
+      r.addTile(t);
+      r.addTile(new Tile({letter: "B"}));
+      r.addTile(new Tile({letter: "C"}));
+      r.addTile(new Tile({letter: "D"}));
+
+      const uri = r.pack();
+      assert.equal(uri, "!BCD----");
+
+      r = new Rack(Game.CLASSES, { id: "base", size: 8 });
+      r.unpack(uri, edition);
+      
+      assert.equal(r.at(0).tile.letter, " ");
+      assert.equal(r.at(0).tile.isBlank, true);
+      assert.equal(r.at(1).tile.letter, "B");
+      assert.equal(r.at(2).tile.letter, "C");
+      assert.equal(r.at(3).tile.letter, "D");
+    });
+  });
 });
 

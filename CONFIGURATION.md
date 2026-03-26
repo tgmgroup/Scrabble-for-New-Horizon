@@ -35,7 +35,7 @@ the following fields:
     + `allowTakeBack` : Whether or not to allow players to take back their most recent move without penalty, so long as the next player hasn't challenged or played. Default is `true`.
 + `games` : Path to the directory where games files will be stored,
   relative to the root of the installation. Defaults to `games`.
-+ `host` : name of host. Defaults to `localhost`.
++ `host` : name of server host. Defaults to `0.0.0.0` (all interfaces). Change to `localhost` to bind only the IP address of the host the server is running on.
 + `html_dir`: sets the directory to get top level html files from. Will usually be either `dist` (for distribution) or `html` (for development). Defaults to `dist`.
 + `https` : HTTPS configuration structure. HTTPS is required for notifications to work in the browser and may be important for protecting passwords. See [here](https://linuxize.com/post/creating-a-self-signed-ssl-certificate/) for how to create a self-signed certificate. On Linux: `openssl req -newkey rsa:4096 -x509 -sha256 -days 3650 -nodes -out https.crt -keyout https.key`
 	+ `cert` : cert file e.g. `https.cert`

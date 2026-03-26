@@ -23,23 +23,20 @@ class UserSettingsDialog extends Dialog {
   createDialog() {
     return super.createDialog()
     .then(() => {
-      const curlan = $.i18n.locale();
-      //console.log("Curlan",curlan);
-
       const ui = this.options.ui;
-      const $css = this.$dlg.find('[name=xanadoCSS]');
+      const $layout = this.$dlg.find('[name=layout]');
       //const $jqt = this.$dlg.find("[name=jqTheme]");
       const $locale = this.$dlg.find('[name=language]');
 
-      return Promise.all([ ui.promiseCSS(), ui.promiseLocales() ])
-      .then(all => {
-        all[0].forEach(css => $css.append(`<option>${css}</option>`));
-        all[1]
-        .filter(d => d !== "qqq")
-        .sort((a, b) => new RegExp(`^${a}`,"i").test(curlan) ? -1 :
-              new RegExp(`^${b}`,"i").test(curlan) ? 1 : 0)
-        .forEach(d => $locale.append(`<option>${d}</option>`));
-      });
+      return Promise.all([
+        ui.promiseLayouts()
+        .then(layouts => layouts
+              .forEach(css => $layout.append(`<option>${css}</option>`))),
+        ui.promiseLocales()
+        .then(locales => locales
+              .filter(d => d !== "qqq")
+              .forEach(lan => $locale.append(`<option>${lan}</option>`)))
+      ]);
     });
   }
 
@@ -53,17 +50,17 @@ class UserSettingsDialog extends Dialog {
       .val(ui.getSetting("language"))
       .selectmenu("refresh");
 
-      this.$dlg.find("select[name=xanadoCSS]")
-      .val(ui.getSetting('theme'))
+      this.$dlg.find("select[name=layout]")
+      .val(ui.getSetting("layout"))
       .selectmenu("refresh");
 
       this.$dlg.find("select[name=jqTheme]")
-      .val(ui.getSetting('jqTheme'))
+      .val(ui.getSetting("jqTheme"))
       .selectmenu("refresh");
 
       this.$dlg.find('input[type=checkbox]')
       .each(function() {
-        $(this).prop('checked', ui.getSetting(this.name) === "true")
+        $(this).prop("checked", ui.getSetting(this.name) === "true")
         .checkboxradio("refresh");
       });
       // Notification requires https

@@ -80,7 +80,7 @@ class Dialog {
     let promise;
     if (this.$dlg.length === 0) {
       // HTML is not already present; load it asynchronously.
-      const path = Platform.getFilePath(
+      const path = Platform.absolutePath(
         `html/${this.options.html || id}.html`);
       promise = $.get(path)
       .then(html_code => {
@@ -165,20 +165,11 @@ class Dialog {
                   `url("${$(this).data('image')}")`);
     });
 
-    // Using tooltips with a selectmenu is tricky.
-    // Applying tooltip() to the select is useless, you have
-    // to apply it to the span that is inserted as next
-    // sibling after the select. However this span is not
-    // created until some indeterminate time in the future,
-    // and there is no event triggered.
-    //
-    // What we have to do is to wait until the selectmenus
-    // have (hopefully!) been created before creating the
-    // tooltips.
     const self = this;
 
     const $selects = this.$dlg.find("select");
     if ($selects.length > 0) {
+
       $selects
       .selectmenu()
       .on("selectmenuchange",
@@ -187,25 +178,53 @@ class Dialog {
             self.$dlg.data("this").enableSubmit();
           });
 
+      // Using tooltips with a selectmenu is tricky.  Applying
+      // tooltip() to the select is useless, you have to apply it to
+      // the span that is inserted as next sibling after the
+      // select. However this span is not created until some
+      // indeterminate time in the future, and there is no event
+      // triggered.
+      //
+      // The following code waits until the selectmenus have
+      // (hopefully!) been created before creating the tooltips.  This
+      // works, up to a point, but there is some interaction that
+      // causes flickering between the tooltip and the dropdown menu
+      // that makes it unusable. The code is kept for reference.
+      /*
       setTimeout(
-        () => this.$dlg
-        .find('select[data-i18n-tooltip] ~ .ui-selectmenu-button')
-        .tooltip({
-          items: ".ui-selectmenu-button",
-          position: {
-            my: "left+15 center",
-            at: "right center",
-            within: "body"
-          },
-          content: function() {
-            return $.i18n(
-              $(this)
-              .prev()
-              .data('i18n-tooltip'));
-          }
-        }),
-        100);
+        () => {
+          // prev ~ siblings selects all sibling elements that follow after
+          // the “prev” element, have the same parent, and match the
+          // filtering “siblings” selector.
+          const $tts = this.$dlg
+                .find('select[data-i18n-tooltip] ~ .ui-selectmenu-button');
+          $tts.tooltip({
+            // the .ui-selectmenu-button has no title attribute, so we have
+            // to define items
+            items: ".ui-selectmenu-button",
+            position: {
+              my: "left+15 center",
+              at: "right center",
+              within: "body"
+            },
+            content: function() {
+              const $select = $(this.previousSibling);
+              return $.i18n($select.data('i18n-tooltip'));
+            }
+          });
+        }, 100);
+      */
+
     }
+
+    this.$dlg.find("[data-i18n-tooltip]")
+    .tooltip({
+      items: "[data-i18n-tooltip]",
+      content: function() {
+        return $.i18n($(this).data("i18n-tooltip"));
+      }
+      /* c8 ignore stop */
+    });
 
     $(".submit", this.$dlg)
     .on("click", () => this.submit());
