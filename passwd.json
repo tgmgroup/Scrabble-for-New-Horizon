@@ -1,0 +1,27 @@
+[
+ {
+  "name": "Tom",
+  "email": "",
+  "provider": "xanado",
+  "pass": "$2b$10$WT/4uq3M4uH1aQQWecxCK.HlTqZOi5ngUriq6j/yGTv2O.ZG5guJu",
+  "key": "4ab3df6fb5388aad",
+  "settings": {
+   "language": "en",
+   "xanadoCSS": "default",
+   "jqTheme": "cupertino",
+   "turn_alert": false,
+   "cheers": false,
+   "tile_click": false,
+   "warnings": false,
+   "one_window": false,
+   "notification": false
+  }
+ },
+ {
+  "name": "G",
+  "email": "G",
+  "provider": "xanado",
+  "pass": "$2b$10$633/HG6tYiJ/W6kBlbmKEuGTw8xqekA9tvbtOsR8y58mzFPSvE0Fi",
+  "key": "8f2bae2f8ce174b0"
+ }
+]
